@@ -35,17 +35,31 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Initialize Redis
 try:
-    redis_client = redis.Redis(
-        host=os.getenv('REDIS_HOST', 'localhost'),
-        port=int(os.getenv('REDIS_PORT', 6379)),
-        db=0,
-        decode_responses=True,
-        socket_connect_timeout=5,
-        socket_timeout=5
-    )
+    # Check for Railway Redis URL first
+    redis_url = os.getenv('REDIS_URL')
+    if redis_url:
+        redis_client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5
+        )
+    else:
+        # Fallback to individual environment variables
+        redis_client = redis.Redis(
+            host=os.getenv('REDIS_HOST', 'localhost'),
+            port=int(os.getenv('REDIS_PORT', 6379)),
+            password=os.getenv('REDIS_PASSWORD'),
+            db=0,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5
+        )
+    
     # Test Redis connection
     redis_client.ping()
     logger.info("✅ Redis connected successfully")
+    logger.info(f"🔗 Redis host: {os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}")
 except Exception as e:
     logger.warning(f"⚠️ Redis connection failed: {e}")
     logger.info("Running without Redis - some features may be limited")

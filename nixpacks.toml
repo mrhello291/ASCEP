@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["nodejs_18", "python311", "gcc"]
+
+[phases.install]
+cmds = [
+  "cd frontend && npm install -g pnpm && pnpm install --frozen-lockfile",
+  "pip install -r backend/requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "cd frontend && pnpm run build"
+]
+
+[start]
+cmd = "bash start_railway.sh" 

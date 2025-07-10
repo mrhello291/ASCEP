@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
 
@@ -34,19 +34,33 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Initialize Redis
-redis_client = redis.Redis(
-    host=os.getenv('REDIS_HOST', 'localhost'),
-    port=int(os.getenv('REDIS_PORT', 6379)),
-    db=0,
-    decode_responses=True
-)
+try:
+    redis_client = redis.Redis(
+        host=os.getenv('REDIS_HOST', 'localhost'),
+        port=int(os.getenv('REDIS_PORT', 6379)),
+        db=0,
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5
+    )
+    # Test Redis connection
+    redis_client.ping()
+    logger.info("✅ Redis connected successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Redis connection failed: {e}")
+    logger.info("Running without Redis - some features may be limited")
+    redis_client = None
 
 # Initialize Celery
-celery_app = Celery(
-    'ascep',
-    broker=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0",
-    backend=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
-)
+if redis_client:
+    celery_app = Celery(
+        'ascep',
+        broker=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0",
+        backend=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
+    )
+else:
+    logger.warning("⚠️ Celery disabled - Redis not available")
+    celery_app = None
 
 # Initialize REST API
 api = Api(app)
@@ -138,11 +152,16 @@ class CEPRules(Resource):
     """CEP Rules management endpoint"""
     def get(self):
         """Get all CEP rules"""
+        if not redis_client:
+            return {'error': 'Redis not available'}, 503
         rules = redis_client.hgetall('cep_rules')
         return {'rules': rules}
     
     def post(self):
         """Create new CEP rule"""
+        if not redis_client:
+            return {'error': 'Redis not available'}, 503
+        
         data = request.get_json()
         if not data:
             return {'error': 'No data provided'}, 400
@@ -189,6 +208,15 @@ def handle_signal_subscription():
     """Handle signal subscription"""
     logger.info(f"Client {request.sid} subscribed to signals")
     emit('subscription_confirmed', {'type': 'signals'})
+
+# Serve React app
+@app.route('/')
+def serve():
+    return app.send_static_file('index.html')
+
+@app.route('/<path:path>')
+def static_proxy(path):
+    return app.send_static_file(path)
 
 # Error handlers
 @app.errorhandler(404)

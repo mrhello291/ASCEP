@@ -3,40 +3,24 @@
 # ASCEP Railway Deployment Script
 echo "🚀 Starting ASCEP on Railway..."
 
-# Install dependencies
-echo "📦 Installing Python dependencies..."
-pip install -r backend/requirements.txt
+# Set environment variables
+export PORT=${PORT:-5000}
+export DEBUG=${DEBUG:-False}
 
-echo "📦 Installing Node.js dependencies..."
-cd frontend && npm install && cd ..
+echo "📊 Using port: $PORT"
+echo "🐛 Debug mode: $DEBUG"
 
-# Start Redis (Railway provides this as a service)
-echo "🔴 Redis will be provided by Railway service"
+# Build frontend if not already built
+if [ ! -d "frontend/build" ]; then
+    echo "🔨 Building frontend..."
+    cd frontend
+    npm install -g pnpm
+    pnpm install --frozen-lockfile
+    pnpm run build
+    cd ..
+fi
 
-# Start backend
+# Start backend only (frontend is served as static files)
 echo "🔧 Starting backend..."
-cd backend && python app.py &
-BACKEND_PID=$!
-
-# Wait for backend to start
-sleep 10
-
-# Start Celery worker
-echo "⚡ Starting Celery worker..."
-cd backend && celery -A celery_worker.celery_app worker --loglevel=info &
-CELERY_PID=$!
-
-# Wait for Celery to start
-sleep 5
-
-# Start frontend
-echo "🌐 Starting frontend..."
-cd frontend && npm start &
-FRONTEND_PID=$!
-
-echo "✅ ASCEP started successfully!"
-echo "📊 Backend: $PORT"
-echo "🌐 Frontend: $PORT (React will redirect)"
-
-# Keep the script running
-wait 
+cd backend
+python app.py 

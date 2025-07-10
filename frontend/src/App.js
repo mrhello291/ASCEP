@@ -17,7 +17,8 @@ function App() {
 
   useEffect(() => {
     // Initialize Socket.IO connection
-    const newSocket = io('http://localhost:5000', {
+    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const newSocket = io(backendUrl, {
       transports: ['websocket', 'polling']
     });
 
@@ -72,18 +73,20 @@ function App() {
 
   const fetchInitialData = async () => {
     try {
+      const backendUrl = process.env.REACT_APP_API_URL || '';
+      
       // Fetch current prices
-      const pricesResponse = await fetch('/api/prices');
+      const pricesResponse = await fetch(`${backendUrl}/api/prices`);
       const pricesData = await pricesResponse.json();
       setPriceData(pricesData.prices || {});
 
       // Fetch recent signals
-      const signalsResponse = await fetch('/api/signals');
+      const signalsResponse = await fetch(`${backendUrl}/api/signals`);
       const signalsData = await signalsResponse.json();
       setSignals(signalsData.signals || []);
 
       // Fetch system status
-      const healthResponse = await fetch('/api/health');
+      const healthResponse = await fetch(`${backendUrl}/api/health`);
       const healthData = await healthResponse.json();
       setSystemStatus(healthData);
     } catch (error) {

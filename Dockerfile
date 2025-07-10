@@ -1,12 +1,16 @@
 # ASCEP Multi-stage Docker Build
 FROM node:18-alpine AS frontend-builder
 
+# Install pnpm
+RUN npm install -g pnpm
+
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci --only=production
+COPY frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 COPY frontend/ ./
-RUN npm run build
+RUN pnpm run build
 
 # Backend stage
 FROM python:3.11-slim

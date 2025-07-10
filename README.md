@@ -51,25 +51,47 @@ ASCEP/
 
 ## 🚀 Quick Start
 
-1. **Clone and setup**:
-   ```bash
-   git clone <your-repo>
-   cd ASCEP
-   ```
+### Prerequisites
+- **Python**: 3.12+ (recommended) or 3.13 (experimental)
+- **Node.js**: 18+ 
+- **Redis**: Latest version
+- **pnpm**: Latest version
 
-2. **Install dependencies**:
-   ```bash
-   # Backend
-   cd backend
-   pip install -r requirements.txt
-   
-   # If pandas installation fails (Python 3.13 compatibility), use:
-   # pip install -r requirements-minimal.txt
-   
-   # Frontend
-   cd ../frontend
-   pnpm install
-   ```
+> **💡 Recommendation**: Use Python 3.12 for better package compatibility. Python 3.13 is still in development and many packages may have compatibility issues.
+
+### Environment Check
+Before installing, check your environment:
+```bash
+python3 check_python.py
+```
+
+### Installation Options
+
+**Option 1: Automated Setup (Recommended)**
+```bash
+./setup.sh
+```
+
+**Option 2: Manual Installation**
+```bash
+# 1. Clone and setup
+git clone <your-repo>
+cd ASCEP
+
+# 2. Backend (uses latest package versions)
+cd backend
+pip install -r requirements.txt
+
+# 3. Frontend (uses latest package versions)
+cd ../frontend
+pnpm install
+```
+
+**Option 3: Minimal Installation (if you encounter issues)**
+```bash
+cd backend
+pip install -r requirements-minimal.txt
+```
 
 3. **Start services**:
    ```bash

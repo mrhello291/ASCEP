@@ -10,7 +10,6 @@ import Navigation from './components/Navigation';
 import './App.css';
 
 function App() {
-  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [priceData, setPriceData] = useState({});
   const [signals, setSignals] = useState([]);
@@ -60,7 +59,7 @@ function App() {
       console.log('Subscription confirmed:', data);
     });
 
-    setSocket(newSocket);
+    // Socket is now managed internally
 
     // Fetch initial data
     fetchInitialData();

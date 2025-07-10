@@ -201,4 +201,8 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
+    logger.info(f"Starting ASCEP Backend on port {port}")
+    logger.info(f"Debug mode: {app.config['DEBUG']}")
+    logger.info(f"Redis host: {os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}")
+    logger.info("ASCEP Backend is ready! Waiting for connections...")
     socketio.run(app, host='0.0.0.0', port=port, debug=app.config['DEBUG']) 

@@ -85,7 +85,7 @@ def redis_price_update_listener():
                     data = json.loads(message['data'])
                     # emit to all connected WebSocket clients
                     socketio.emit('price_update', data)
-                    logger.debug(f"Emitted price update: {data['symbol']}")
+                    logger.info(f"Emitted price update: {data['symbol']}")
                 except Exception as e:
                     logger.error(f"Error emitting price update: {e}")
             # yield to eventlet

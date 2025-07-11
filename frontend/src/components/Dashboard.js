@@ -1,17 +1,52 @@
-import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, AlertTriangle, Activity, DollarSign } from 'lucide-react';
 
 const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
-  // Convert price data to chart format
-  const chartData = Object.entries(priceData).map(([symbol, data]) => ({
-    symbol,
-    price: data.price,
-    timestamp: new Date(data.timestamp).toLocaleTimeString(),
-  }));
+  const [chartData, setChartData] = useState([]);
+  const [selectedSymbols, setSelectedSymbols] = useState(['BTCUSDT', 'ETHUSDT', 'EUR/USD']);
+
+  // Update chart data when priceData changes
+  useEffect(() => {
+    const now = new Date();
+    const newDataPoint = {
+      timestamp: now.toLocaleTimeString(),
+      time: now.getTime(),
+    };
+
+    // Add price data for selected symbols
+    selectedSymbols.forEach(symbol => {
+      if (priceData[symbol]) {
+        newDataPoint[symbol] = parseFloat(priceData[symbol].price);
+      }
+    });
+
+    setChartData(prevData => {
+      const updatedData = [...prevData, newDataPoint];
+      // Keep only last 20 data points for better visualization
+      return updatedData.slice(-20);
+    });
+  }, [priceData, selectedSymbols]);
 
   // Get recent signals
   const recentSignals = signals.slice(0, 5);
+
+  // Available symbols for selection
+  const availableSymbols = Object.keys(priceData).sort();
+
+  // Color scheme for different symbols
+  const symbolColors = {
+    'BTCUSDT': '#F7931A',
+    'ETHUSDT': '#627EEA',
+    'EUR/USD': '#00D4AA',
+    'GBP/USD': '#FF6B6B',
+    'USD/JPY': '#4ECDC4',
+    'ADAUSDT': '#0033AD',
+    'DOTUSDT': '#E6007A',
+    'LINKUSDT': '#2A5ADA',
+    'LTCUSDT': '#BFBBBB',
+    'XRPUSDT': '#23292F'
+  };
 
   return (
     <div className="space-y-6">
@@ -75,9 +110,11 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
               <TrendingUp className="text-white" size={24} />
             </div>
             <div className="ml-4">
-              <p className="text-gray-400 text-sm">Active Connections</p>
-              <p className="text-lg font-semibold text-white">
-                {systemStatus.active_connections || 0}
+              <p className="text-gray-400 text-sm">System Status</p>
+              <p className={`text-lg font-semibold ${
+                systemStatus.overall_status === 'healthy' ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {systemStatus.overall_status || 'Unknown'}
               </p>
             </div>
           </div>
@@ -88,34 +125,101 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Price Chart */}
         <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Price Trends</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-white">Live Price Chart</h2>
+            <div className="flex gap-2">
+              <select 
+                value={selectedSymbols[0]} 
+                onChange={(e) => setSelectedSymbols([e.target.value, selectedSymbols[1], selectedSymbols[2]])}
+                className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+              >
+                {availableSymbols.map(symbol => (
+                  <option key={symbol} value={symbol}>{symbol}</option>
+                ))}
+              </select>
+              <select 
+                value={selectedSymbols[1]} 
+                onChange={(e) => setSelectedSymbols([selectedSymbols[0], e.target.value, selectedSymbols[2]])}
+                className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+              >
+                {availableSymbols.map(symbol => (
+                  <option key={symbol} value={symbol}>{symbol}</option>
+                ))}
+              </select>
+              <select 
+                value={selectedSymbols[2]} 
+                onChange={(e) => setSelectedSymbols([selectedSymbols[0], selectedSymbols[1], e.target.value])}
+                className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+              >
+                {availableSymbols.map(symbol => (
+                  <option key={symbol} value={symbol}>{symbol}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="timestamp" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  stroke="#9CA3AF"
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  stroke="#9CA3AF"
+                  tick={{ fontSize: 12 }}
+                  domain={['dataMin - 0.1', 'dataMax + 0.1']}
+                />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1F2937', 
                     border: '1px solid #374151',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    color: '#fff'
                   }}
+                  labelStyle={{ color: '#9CA3AF' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="price" 
-                  stroke="#3B82F6" 
-                  strokeWidth={2}
-                  dot={{ fill: '#3B82F6' }}
-                />
+                <Legend />
+                {selectedSymbols.map(symbol => (
+                  <Line 
+                    key={symbol}
+                    type="monotone" 
+                    dataKey={symbol} 
+                    stroke={symbolColors[symbol] || '#3B82F6'} 
+                    strokeWidth={2}
+                    dot={{ fill: symbolColors[symbol] || '#3B82F6', r: 3 }}
+                    activeDot={{ r: 5 }}
+                    connectNulls={false}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-64 text-gray-400">
-              <p>No price data available</p>
+              <p>Waiting for price data...</p>
             </div>
           )}
+          
+          {/* Current Prices Display */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {selectedSymbols.map(symbol => {
+              const data = priceData[symbol];
+              return (
+                <div key={symbol} className="bg-gray-700 rounded p-3">
+                  <p className="text-gray-400 text-xs">{symbol}</p>
+                  <p className="text-white font-semibold">
+                    {data ? parseFloat(data.price).toFixed(4) : 'N/A'}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {data ? new Date(data.timestamp).toLocaleTimeString() : ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Recent Signals */}

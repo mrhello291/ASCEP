@@ -4,6 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import io from 'socket.io-client';
 import Dashboard from './components/Dashboard';
 import PriceFeed from './components/PriceFeed';
+import Visualizations from './components/Visualizations';
+import CurrencyConverter from './components/CurrencyConverter';
+import MarketComparison from './components/MarketComparison';
+import HFTDashboard from './components/HFTDashboard';
 import ArbitrageSignals from './components/ArbitrageSignals';
 import CEPRules from './components/CEPRules';
 import Navigation from './components/Navigation';
@@ -62,16 +66,48 @@ function App() {
       console.log('Subscription confirmed:', data);
     });
 
-    // Socket is now managed internally
-
     // Fetch initial data
     fetchInitialData();
+
+    // Set up periodic refresh for signals (every 30 seconds)
+    const signalsInterval = setInterval(() => {
+      fetchSignals();
+    }, 30000);
+
+    // Set up periodic refresh for system status (every 10 seconds)
+    const statusInterval = setInterval(() => {
+      fetchSystemStatus();
+    }, 10000);
 
     // Cleanup on unmount
     return () => {
       newSocket.close();
+      clearInterval(signalsInterval);
+      clearInterval(statusInterval);
     };
   }, []);
+
+  const fetchSignals = async () => {
+    try {
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const signalsResponse = await fetch(`${backendUrl}/api/signals`);
+      const signalsData = await signalsResponse.json();
+      setSignals(signalsData.signals || []);
+    } catch (error) {
+      console.error('Error fetching signals:', error);
+    }
+  };
+
+  const fetchSystemStatus = async () => {
+    try {
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const healthResponse = await fetch(`${backendUrl}/api/health`);
+      const healthData = await healthResponse.json();
+      setSystemStatus(healthData);
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -130,6 +166,42 @@ function App() {
               path="/prices" 
               element={
                 <PriceFeed 
+                  priceData={priceData}
+                  isConnected={isConnected}
+                />
+              } 
+            />
+            <Route 
+              path="/visualizations" 
+              element={
+                <Visualizations 
+                  priceData={priceData}
+                  isConnected={isConnected}
+                />
+              } 
+            />
+            <Route 
+              path="/converter" 
+              element={
+                <CurrencyConverter 
+                  priceData={priceData}
+                  isConnected={isConnected}
+                />
+              } 
+            />
+            <Route 
+              path="/comparison" 
+              element={
+                <MarketComparison 
+                  priceData={priceData}
+                  isConnected={isConnected}
+                />
+              } 
+            />
+            <Route 
+              path="/hft" 
+              element={
+                <HFTDashboard 
                   priceData={priceData}
                   isConnected={isConnected}
                 />

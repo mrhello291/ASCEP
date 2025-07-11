@@ -16,7 +16,7 @@ from health_service import app
 if __name__ == '__main__':
     import logging
     import threading
-    from health_service import health_monitor_thread
+    from health_service import health_monitor_thread, redis_monitor_thread
     logging.basicConfig(level=logging.INFO)
     
     print("🚀 Starting ASCEP Health Service...")
@@ -25,5 +25,9 @@ if __name__ == '__main__':
     # Start health monitor thread
     monitor_thread = threading.Thread(target=health_monitor_thread, daemon=True)
     monitor_thread.start()
+    
+    # Start Redis monitor thread
+    redis_monitor_thread = threading.Thread(target=redis_monitor_thread, daemon=True)
+    redis_monitor_thread.start()
     
     app.run(host='0.0.0.0', port=5001, debug=False) 

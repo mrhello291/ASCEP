@@ -95,6 +95,10 @@ health_status = {
     'overall_status': 'unknown'
 }
 
+# Global Redis data cache
+latest_signal_timestamp = None
+current_signals_count = 0
+
 def check_service_health(service_name, config):
     """Check health of a specific service"""
     try:
@@ -167,16 +171,65 @@ def health_monitor_thread():
             logger.error(f"Health monitor thread error: {e}")
             time.sleep(60)  # Wait longer on error
 
+def redis_monitor_thread():
+    """Background thread for Redis data monitoring (more frequent)"""
+    while True:
+        try:
+            # Update Redis data more frequently
+            if redis_client:
+                # Get signals count
+                signal_keys = redis_client.keys('signal:*')
+                signals_count = len(signal_keys)
+                
+                # Get latest signal timestamp
+                if signal_keys:
+                    latest_signal = None
+                    for key in signal_keys:
+                        signal_data = redis_client.hgetall(key)
+                        if signal_data and 'timestamp' in signal_data:
+                            if not latest_signal or signal_data['timestamp'] > latest_signal:
+                                latest_signal = signal_data['timestamp']
+                    
+                    # Store latest signal timestamp in memory for quick access
+                    global latest_signal_timestamp
+                    latest_signal_timestamp = latest_signal
+                
+                # Store signals count in memory for quick access
+                global current_signals_count
+                current_signals_count = signals_count
+                
+            time.sleep(5)  # Check every 5 seconds
+        except Exception as e:
+            logger.error(f"Redis monitor thread error: {e}")
+            time.sleep(10)  # Wait longer on error
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    # Get additional system information
+    signals_count = current_signals_count
+    last_signal_update = latest_signal_timestamp
+    price_feeds_count = 0
+    
+    if redis_client:
+        try:
+            # Get price feeds count (less frequent, can be real-time)
+            price_keys = redis_client.keys('price:*')
+            price_feeds_count = len(price_keys)
+            
+        except Exception as e:
+            logger.error(f"Error getting Redis data: {e}")
+    
     return jsonify({
         'service': 'Health Service',
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'overall_status': health_status['overall_status'],
         'services': health_status['services'],
-        'last_check': health_status['last_check']
+        'last_check': health_status['last_check'],
+        'signals_count': signals_count,
+        'last_signal_update': last_signal_update,
+        'price_feeds_count': price_feeds_count
     })
 
 @app.route('/status', methods=['GET'])
@@ -237,6 +290,10 @@ if __name__ == '__main__':
     # Start health monitoring thread
     monitor_thread = threading.Thread(target=health_monitor_thread, daemon=True)
     monitor_thread.start()
+    
+    # Start Redis monitoring thread
+    redis_monitor_thread = threading.Thread(target=redis_monitor_thread, daemon=True)
+    redis_monitor_thread.start()
     
     # Initial health check
     update_health_status()

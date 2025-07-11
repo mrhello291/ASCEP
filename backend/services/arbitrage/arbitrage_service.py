@@ -63,6 +63,44 @@ except Exception as e:
 arbitrage_signals = []
 signal_id_counter = 1
 
+# Demo signals for testing
+demo_signals = [
+    {
+        'id': 1,
+        'symbols': ['BTCUSDT', 'ETHUSDT'],
+        'prices': [45000.0, 3200.0],
+        'spread': 0.85,
+        'spread_percentage': 0.85,
+        'type': 'crypto_arbitrage',
+        'timestamp': datetime.utcnow().isoformat(),
+        'severity': 'high'
+    },
+    {
+        'id': 2,
+        'symbols': ['EUR/USD', 'USD/EUR'],
+        'prices': [1.0850, 0.9215],
+        'spread': 0.0035,
+        'spread_percentage': 0.32,
+        'type': 'forex_arbitrage',
+        'timestamp': datetime.utcnow().isoformat(),
+        'severity': 'medium'
+    },
+    {
+        'id': 3,
+        'symbols': ['ADAUSDT', 'DOTUSDT'],
+        'prices': [0.45, 6.80],
+        'spread': 0.12,
+        'spread_percentage': 0.45,
+        'type': 'altcoin_arbitrage',
+        'timestamp': datetime.utcnow().isoformat(),
+        'severity': 'medium'
+    }
+]
+
+# Initialize with demo signals
+arbitrage_signals.extend(demo_signals)
+signal_id_counter = len(demo_signals) + 1
+
 def detect_arbitrage_opportunities():
     """Detect arbitrage opportunities from price data"""
     try:
@@ -172,7 +210,11 @@ def create_arbitrage_signal(opportunity):
         # Store in Redis
         if redis_client:
             signal_key = f"signal:{signal['id']}"
-            redis_client.hmset(signal_key, signal)
+            # Convert lists to JSON strings for Redis storage
+            redis_signal = signal.copy()
+            redis_signal['symbols'] = json.dumps(signal['symbols'])
+            redis_signal['prices'] = json.dumps(signal['prices'])
+            redis_client.hmset(signal_key, redis_signal)
             redis_client.expire(signal_key, 86400)  # 24 hours
             
             # Publish to Redis channel

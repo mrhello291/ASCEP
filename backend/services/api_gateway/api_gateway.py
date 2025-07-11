@@ -102,8 +102,43 @@ def redis_price_update_listener():
                 logger.error(f"Failed to reconnect to Redis: {reconnect_error}")
                 socketio.sleep(5)  # Wait before retrying
 
-# Start the listener as a Socket.IO background task
+def redis_arbitrage_signals_listener():
+    if not redis_client:
+        logger.warning("Redis not initialized; no arbitrage signal updates.")
+        return
+
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('arbitrage_signals')
+    logger.info("🔔 Subscribed to arbitrage_signals channel")
+
+    while True:
+        try:
+            message = pubsub.get_message(timeout=1)
+            if message and message['type'] == 'message':
+                try:
+                    signal = json.loads(message['data'])
+                    # emit to all connected WebSocket clients
+                    socketio.emit('arbitrage_signal', signal)
+                    logger.info(f"Emitted arbitrage signal: {signal.get('type', 'unknown')} - {signal.get('spread_percentage', 0):.2f}%")
+                except Exception as e:
+                    logger.error(f"Error emitting arbitrage signal: {e}")
+            # yield to eventlet
+            socketio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Arbitrage signals Redis listener error: {e}")
+            # Try to reconnect
+            try:
+                pubsub.close()
+                pubsub = redis_client.pubsub()
+                pubsub.subscribe('arbitrage_signals')
+                logger.info("Reconnected to arbitrage signals Redis pub/sub")
+            except Exception as reconnect_error:
+                logger.error(f"Failed to reconnect to arbitrage signals Redis: {reconnect_error}")
+                socketio.sleep(5)  # Wait before retrying
+
+# Start the listeners as Socket.IO background tasks
 socketio.start_background_task(redis_price_update_listener)
+socketio.start_background_task(redis_arbitrage_signals_listener)
 
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)

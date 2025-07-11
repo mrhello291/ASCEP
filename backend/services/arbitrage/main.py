@@ -6,17 +6,33 @@ Main entry point for the Arbitrage service
 
 import os
 import sys
+import threading
+import logging
 
 # Add the service directory to Python path
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from arbitrage_service import app
+from arbitrage_service import app, arbitrage_detection_thread, redis_price_listener
+
+def start_background_threads():
+    """Start background threads for arbitrage detection and Redis listening"""
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    # Start background threads
+    detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
+    detection_thread.start()
+    logger.info("✅ Arbitrage detection thread started")
+    
+    redis_thread = threading.Thread(target=redis_price_listener, daemon=True)
+    redis_thread.start()
+    logger.info("✅ Redis price listener thread started")
+
+# Start threads when module is imported
+start_background_threads()
 
 if __name__ == '__main__':
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    
     print("🚀 Starting ASCEP Arbitrage Service...")
     print("💰 Service will be available at: http://localhost:5003")
     

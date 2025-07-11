@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Activity, TrendingUp, Settings } from 'lucide-react';
+import { Wifi, WifiOff, Activity, TrendingUp, Settings, BarChart3, Calculator, Globe, Zap } from 'lucide-react';
 
 const Navigation = ({ isConnected, systemStatus }) => {
   const location = useLocation();
@@ -8,7 +8,12 @@ const Navigation = ({ isConnected, systemStatus }) => {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Activity },
     { path: '/prices', label: 'Price Feeds', icon: TrendingUp },
-    { path: '/signals', label: 'Signals', icon: TrendingUp },
+    { path: '/visualizations', label: 'Charts', icon: BarChart3 },
+    { path: '/converter', label: 'Converter', icon: Calculator },
+    { path: '/comparison', label: 'Analysis', icon: Globe },
+    { path: '/hft', label: 'HFT Dashboard', icon: Zap },
+    // Only show signals if we have signals data
+    ...(systemStatus?.signals_count > 0 ? [{ path: '/signals', label: 'Signals', icon: TrendingUp }] : []),
     { path: '/rules', label: 'CEP Rules', icon: Settings },
   ];
 

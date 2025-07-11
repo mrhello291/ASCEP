@@ -13,4 +13,4 @@ cmds = [
 ]
 
 [start]
-cmd = "bash start_railway.sh" 
+cmd = "./start_microservices.sh" 

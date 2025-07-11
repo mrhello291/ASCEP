@@ -20,18 +20,19 @@ This guide will help you deploy ASCEP to Railway (backend) and Vercel (frontend)
 
 ### 1.2 Docker Architecture
 
-**Important**: This deployment uses Docker to run all services in a single container:
+**Important**: This deployment uses Docker to run all backend services in a single container:
 
 - **Redis**: Built-in Redis server (no external service needed)
 - **All Microservices**: Health, API Gateway, Price Feeds, Arbitrage, CEP Engine
-- **Nginx**: Reverse proxy and static file server
+- **Nginx**: Reverse proxy for API endpoints
 - **Supervisor**: Process manager for all services
 
 **Benefits**:
-- Single container deployment
+- Single container deployment for backend
 - No external Redis dependency
-- Built-in load balancing and caching
+- Built-in API load balancing
 - Easier deployment and scaling
+- Frontend deployed separately on Vercel
 
 ### 1.3 Configure Environment Variables
 
@@ -58,7 +59,7 @@ NODE_ENV=production
 Once deployed, Railway will provide a URL like:
 `https://your-project-name.railway.app`
 
-**Note**: The Docker container runs all services on port 5000, with Nginx serving as the main entry point.
+**Note**: The Docker container runs all backend services on port 5000, with Nginx serving as the API entry point. The frontend is deployed separately on Vercel.
 
 ## Step 2: Deploy Frontend to Vercel
 
@@ -111,7 +112,7 @@ After getting your Railway URL, update the frontend environment variable:
 │   Vercel        │    │   Railway Docker Container              │
 │   Frontend      │◄──►│   ┌─────────┐ ┌─────────┐ ┌─────────┐  │
 │   (React)       │    │   │  Nginx  │ │  Redis  │ │Supervisor│  │
-│                 │    │   │(Port 80)│ │(Port 6379)│ │(Manager) │  │
+│                 │    │   │(API Proxy)│ │(Port 6379)│ │(Manager) │  │
 │                 │    │   └─────────┘ └─────────┘ └─────────┘  │
 │                 │    │   ┌─────────┐ ┌─────────┐ ┌─────────┐  │
 │                 │    │   │  API    │ │ Price   │ │Arbitrage│  │
@@ -125,8 +126,8 @@ After getting your Railway URL, update the frontend environment variable:
 ```
 
 - **Vercel**: Hosts the React frontend
-- **Railway Docker Container**: Single container running all services
-  - **Nginx**: Reverse proxy and static file server
+- **Railway Docker Container**: Single container running all backend services
+  - **Nginx**: Reverse proxy for API endpoints
   - **Redis**: Built-in Redis server for data storage and pub/sub
   - **Supervisor**: Process manager for all microservices
   - **All Microservices**: Health, API Gateway, Price Feeds, Arbitrage, CEP Engine

@@ -10,6 +10,17 @@ export DEBUG=${DEBUG:-False}
 echo "📊 Using port: $PORT"
 echo "🐛 Debug mode: $DEBUG"
 
+# Check if Redis is available
+echo "🔍 Checking Redis availability..."
+if [ -n "$REDIS_URL" ]; then
+    echo "✅ Redis URL found: ${REDIS_URL:0:20}..."
+elif [ -n "$REDIS_HOST" ]; then
+    echo "✅ Redis host found: $REDIS_HOST:$REDIS_PORT"
+else
+    echo "⚠️ No Redis configuration found"
+    echo "💡 The app will run without Redis (some features limited)"
+fi
+
 # Build frontend if not already built
 if [ ! -d "frontend/build" ]; then
     echo "🔨 Building frontend..."

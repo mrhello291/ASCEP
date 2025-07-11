@@ -38,6 +38,7 @@ try:
     # Check for Railway Redis URL first
     redis_url = os.getenv('REDIS_URL')
     if redis_url:
+        logger.info(f"🔗 Connecting to Redis via URL: {redis_url[:20]}...")
         redis_client = redis.from_url(
             redis_url,
             decode_responses=True,
@@ -45,11 +46,16 @@ try:
             socket_timeout=5
         )
     else:
-        # Fallback to individual environment variables
+        # Fallback to individual environment variables (check both naming conventions)
+        redis_host = os.getenv('REDIS_HOST') or os.getenv('REDISHOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT') or os.getenv('REDISPORT', 6379))
+        redis_password = os.getenv('REDIS_PASSWORD') or os.getenv('REDISPASSWORD')
+        
+        logger.info(f"🔗 Connecting to Redis at {redis_host}:{redis_port}")
         redis_client = redis.Redis(
-            host=os.getenv('REDIS_HOST', 'localhost'),
-            port=int(os.getenv('REDIS_PORT', 6379)),
-            password=os.getenv('REDIS_PASSWORD'),
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
             db=0,
             decode_responses=True,
             socket_connect_timeout=5,
@@ -59,18 +65,30 @@ try:
     # Test Redis connection
     redis_client.ping()
     logger.info("✅ Redis connected successfully")
-    logger.info(f"🔗 Redis host: {os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}")
+    logger.info(f"🔗 Redis host: {redis_host}:{redis_port}")
 except Exception as e:
     logger.warning(f"⚠️ Redis connection failed: {e}")
     logger.info("Running without Redis - some features may be limited")
+    logger.info("💡 To enable Redis: Add Redis service in Railway dashboard")
     redis_client = None
 
 # Initialize Celery
 if redis_client:
+    # Use the same Redis connection details for Celery
+    redis_host = os.getenv('REDIS_HOST') or os.getenv('REDISHOST', 'localhost')
+    redis_port = int(os.getenv('REDIS_PORT') or os.getenv('REDISPORT', 6379))
+    redis_password = os.getenv('REDIS_PASSWORD') or os.getenv('REDISPASSWORD')
+    
+    # Build Redis URL for Celery
+    if redis_password:
+        redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/0"
+    else:
+        redis_url = f"redis://{redis_host}:{redis_port}/0"
+    
     celery_app = Celery(
         'ascep',
-        broker=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0",
-        backend=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
+        broker=redis_url,
+        backend=redis_url
     )
 else:
     logger.warning("⚠️ Celery disabled - Redis not available")

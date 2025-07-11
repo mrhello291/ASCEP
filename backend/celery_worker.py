@@ -18,17 +18,28 @@ load_dotenv()
 # Configure logging
 logger = get_task_logger(__name__)
 
-# Initialize Celery
+# Initialize Celery with Redis connection (check both naming conventions)
+redis_host = os.getenv('REDIS_HOST') or os.getenv('REDISHOST', 'localhost')
+redis_port = int(os.getenv('REDIS_PORT') or os.getenv('REDISPORT', 6379))
+redis_password = os.getenv('REDIS_PASSWORD') or os.getenv('REDISPASSWORD')
+
+# Build Redis URL for Celery
+if redis_password:
+    redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/0"
+else:
+    redis_url = f"redis://{redis_host}:{redis_port}/0"
+
 celery_app = Celery(
     'ascep',
-    broker=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0",
-    backend=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0"
+    broker=redis_url,
+    backend=redis_url
 )
 
 # Initialize Redis
 redis_client = redis.Redis(
-    host=os.getenv('REDIS_HOST', 'localhost'),
-    port=int(os.getenv('REDIS_PORT', 6379)),
+    host=redis_host,
+    port=redis_port,
+    password=redis_password,
     db=0,
     decode_responses=True
 )

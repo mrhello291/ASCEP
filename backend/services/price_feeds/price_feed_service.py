@@ -11,18 +11,29 @@ import requests
 import json
 import redis
 import logging
+import threading
 from datetime import datetime
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
-# Add data_ingestion to path (relative to project root)
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-data_ingestion_path = os.path.join(project_root, 'data_ingestion')
-sys.path.append(data_ingestion_path)
+# Remove data_ingestion path logic and import price_feeds directly
+import os
+import sys
+import time
+import requests
+import json
+import redis
+import logging
+import threading
+from datetime import datetime
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 try:
     from price_feeds import BinanceWebSocketFeed, MockPriceFeed, PriceFeedManager
+    print("✅ Successfully imported price_feeds module")
 except ImportError as e:
     print(f"❌ Error importing price feeds: {e}")
-    print(f"Looking for price_feeds in: {data_ingestion_path}")
     sys.exit(1)
 
 # Configure logging
@@ -31,6 +42,17 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'price-feed-service-key')
+
+# Initialize CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Global variables for health status
+feed_manager = None
+service_start_time = datetime.utcnow()
 
 def send_price_to_backend(symbol, price, timestamp):
     """Send price update to backend API and Redis"""
@@ -57,7 +79,8 @@ def send_price_to_backend(symbol, price, timestamp):
         
         # Send to API Gateway (port 5000)
         try:
-            gateway_url = 'http://localhost:5000'
+            # Use environment variable or default to localhost
+            gateway_url = os.getenv('API_GATEWAY_URL', 'http://localhost:5000')
             response = requests.post(f'{gateway_url}/api/prices', json=data, timeout=5)
             
             if response.status_code == 200:
@@ -102,12 +125,98 @@ except Exception as e:
     logger.warning(f"⚠️ Redis connection failed: {e}")
     redis_client = None
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    global feed_manager
+    
+    status = {
+        'service': 'Price Feed Service',
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'uptime': str(datetime.utcnow() - service_start_time),
+        'redis_connected': redis_client is not None,
+        'feeds': {}
+    }
+    
+    if feed_manager:
+        feed_status = feed_manager.get_feed_status()
+        status['feeds'] = feed_status
+        status['total_feeds'] = len(feed_status)
+        status['connected_feeds'] = sum(1 for connected in feed_status.values() if connected)
+    
+    return jsonify(status)
+
+@app.route('/status', methods=['GET'])
+def detailed_status():
+    """Detailed status endpoint"""
+    return jsonify({
+        'service': 'Price Feed Service',
+        'version': '1.0.0',
+        'timestamp': datetime.utcnow().isoformat(),
+        'uptime': str(datetime.utcnow() - service_start_time),
+        'redis_connected': redis_client is not None,
+        'endpoints': {
+            'health': '/health',
+            'status': '/status'
+        }
+    })
+
+@app.route('/prices', methods=['GET', 'POST'])
+def prices_endpoint():
+    """Handle price data requests"""
+    global feed_manager
+    
+    if request.method == 'POST':
+        # Handle incoming price updates
+        try:
+            data = request.get_json()
+            if data:
+                logger.info(f"Received price update: {data}")
+                return jsonify({'status': 'success', 'message': 'Price update received'}), 200
+            else:
+                return jsonify({'error': 'No data provided'}), 400
+        except Exception as e:
+            logger.error(f"Error processing price update: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    else:  # GET request
+        # Return current price data
+        try:
+            # Get current prices from Redis or return empty dict
+            prices = {}
+            if redis_client:
+                # Get all price keys from Redis
+                price_keys = redis_client.keys('price:*')
+                for key in price_keys:
+                    symbol = key.replace('price:', '')
+                    price_data = redis_client.hgetall(key)
+                    if price_data:
+                        prices[symbol] = {
+                            'price': float(price_data.get('price', 0)),
+                            'timestamp': price_data.get('timestamp', '')
+                        }
+            
+            return jsonify({
+                'prices': prices,
+                'timestamp': datetime.utcnow().isoformat(),
+                'total_pairs': len(prices)
+            }), 200
+        except Exception as e:
+            logger.error(f"Error retrieving prices: {e}")
+            return jsonify({'error': str(e)}), 500
+
+def run_flask_app():
+    """Run Flask app in a separate thread"""
+    app.run(host='0.0.0.0', port=5002, debug=False, use_reloader=False)
+
 def main():
+    global feed_manager
     logger.info("🚀 Starting ASCEP Price Feed Service...")
     
     # Initialize price feed manager
-    manager = PriceFeedManager()
-    manager.add_price_callback(send_price_to_backend)
+    feed_manager = PriceFeedManager()
+    feed_manager.add_price_callback(send_price_to_backend)
     
     # Crypto symbols (Binance WebSocket - Real-time)
     crypto_symbols = [
@@ -116,11 +225,6 @@ def main():
         'BNB/USDT',    # Binance Coin
         'ADA/USDT',    # Cardano
         'SOL/USDT',    # Solana
-        'DOT/USDT',    # Polkadot
-        'LINK/USDT',   # Chainlink
-        'MATIC/USDT',  # Polygon
-        'AVAX/USDT',   # Avalanche
-        'UNI/USDT'     # Uniswap
     ]
     
     # Forex pairs (Mock feed for now)
@@ -144,18 +248,24 @@ def main():
     # Add Binance crypto feed
     logger.info("🪙 Adding Binance crypto feed...")
     binance_feed = BinanceWebSocketFeed(crypto_symbols)
-    manager.add_feed(binance_feed)
+    feed_manager.add_feed(binance_feed)
     
     # Add mock feed for forex (since no API keys in production)
     logger.info("💱 Adding mock forex feed...")
     mock_feed = MockPriceFeed(forex_symbols)
-    manager.add_feed(mock_feed)
+    feed_manager.add_feed(mock_feed)
     
     # Connect to all feeds
     logger.info("🔌 Connecting to all feeds...")
-    manager.connect_all()
+    feed_manager.connect_all()
     
     logger.info("✅ Price feed service started!")
+    
+    # Start Flask app in a separate thread
+    flask_thread = threading.Thread(target=run_flask_app, daemon=True)
+    flask_thread.start()
+    logger.info("🌐 Flask app started on port 5002")
+    
     logger.info("📱 Press Ctrl+C to stop")
     
     # Keep the service running
@@ -164,7 +274,7 @@ def main():
             time.sleep(30)
             
             # Log status every 30 seconds
-            status = manager.get_feed_status()
+            status = feed_manager.get_feed_status()
             logger.info("📊 Feed Status:")
             for feed_name, is_connected in status.items():
                 status_icon = "✅" if is_connected else "❌"
@@ -172,7 +282,7 @@ def main():
                 
     except KeyboardInterrupt:
         logger.info("🛑 Stopping price feed service...")
-        manager.disconnect_all()
+        feed_manager.disconnect_all()
         logger.info("✅ Price feed service stopped")
 
 if __name__ == "__main__":

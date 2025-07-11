@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  health:
+    build:
+      context: ./backend/services/health
+      dockerfile: Dockerfile
+    container_name: health_service
+    ports:
+      - "5001:5001"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ascep_network
+
+  api_gateway:
+    build:
+      context: ./backend/services/api_gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DOCKER_COMPOSE=true
+    depends_on:
+      health:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ascep_network
+
+  price_feeds:
+    build:
+      context: ./backend/services/price_feeds
+      dockerfile: Dockerfile
+    container_name: price_feed_service
+    ports:
+      - "5002:5002"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DOCKER_COMPOSE=true
+      - API_GATEWAY_URL=http://api_gateway:5000
+    depends_on:
+      api_gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ascep_network
+
+  arbitrage:
+    build:
+      context: ./backend/services/arbitrage
+      dockerfile: Dockerfile
+    container_name: arbitrage_service
+    ports:
+      - "5003:5003"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      price_feeds:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ascep_network
+
+  cep_engine:
+    build:
+      context: ./backend/services/cep_engine
+      dockerfile: Dockerfile
+    container_name: cep_engine_service
+    ports:
+      - "5004:5004"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      arbitrage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ascep_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:5000
+        - REACT_APP_WS_URL=ws://localhost:5000
+    container_name: ascep_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      api_gateway:
+        condition: service_healthy
+    networks:
+      - ascep_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ascep_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ascep_network
+
+networks:
+  ascep_network:
+    driver: bridge 

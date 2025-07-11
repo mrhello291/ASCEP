@@ -68,6 +68,43 @@ except Exception as e:
     logger.warning(f"⚠️ Redis connection failed: {e}")
     redis_client = None
 
+def redis_price_update_listener():
+    if not redis_client:
+        logger.warning("Redis not initialized; no real‑time updates.")
+        return
+
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('price_updates')
+    logger.info("🔔 Subscribed to price_updates channel")
+
+    while True:
+        try:
+            message = pubsub.get_message(timeout=1)
+            if message and message['type'] == 'message':
+                try:
+                    data = json.loads(message['data'])
+                    # emit to all connected WebSocket clients
+                    socketio.emit('price_update', data)
+                    logger.debug(f"Emitted price update: {data['symbol']}")
+                except Exception as e:
+                    logger.error(f"Error emitting price update: {e}")
+            # yield to eventlet
+            socketio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Redis listener error: {e}")
+            # Try to reconnect
+            try:
+                pubsub.close()
+                pubsub = redis_client.pubsub()
+                pubsub.subscribe('price_updates')
+                logger.info("Reconnected to Redis pub/sub")
+            except Exception as reconnect_error:
+                logger.error(f"Failed to reconnect to Redis: {reconnect_error}")
+                socketio.sleep(5)  # Wait before retrying
+
+# Start the listener as a Socket.IO background task
+socketio.start_background_task(redis_price_update_listener)
+
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)
 
@@ -138,6 +175,8 @@ def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
         )
         logger.error(f"Error routing request to {service_name}: {e}")
         return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():

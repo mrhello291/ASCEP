@@ -72,11 +72,23 @@ class BinanceWebSocketFeed(PriceFeed):
                 else:
                     binance_symbols.append(symbol.lower())
             
-            # Create WebSocket URL
+            # Create WebSocket URL - use combined streams endpoint for better performance
             streams = [f"{symbol}@ticker" for symbol in binance_symbols]
-            ws_url = f"wss://stream.binance.com:9443/ws/{'/'.join(streams)}"
             
-            logger.info(f"Connecting to Binance WebSocket: {ws_url}")
+            # If we have too many streams, use the combined streams endpoint
+            if len(streams) > 5:
+                # Use the combined streams endpoint which is more efficient
+                ws_url = f"wss://stream.binance.com:9443/stream?streams={'/'.join(streams)}"
+            else:
+                # For fewer streams, use the regular endpoint
+                ws_url = f"wss://stream.binance.com:9443/ws/{'/'.join(streams)}"
+            
+            logger.info(f"Connecting to Binance WebSocket with {len(streams)} streams")
+            logger.info(f"WebSocket URL length: {len(ws_url)} characters")
+            
+            # Check if URL is too long (should be under 2048 characters for most servers)
+            if len(ws_url) > 2000:
+                logger.warning(f"WebSocket URL is very long ({len(ws_url)} chars). Consider reducing number of symbols.")
             
             # Create WebSocket connection
             self.ws = websocket.WebSocketApp(
@@ -115,6 +127,10 @@ class BinanceWebSocketFeed(PriceFeed):
         try:
             data = json.loads(message)
             
+            # Handle combined streams format (data is wrapped in a 'data' field)
+            if 'data' in data:
+                data = data['data']
+            
             if 's' in data and 'c' in data:  # Symbol and close price
                 symbol = data['s']
                 price = float(data['c'])
@@ -133,6 +149,7 @@ class BinanceWebSocketFeed(PriceFeed):
                 
         except Exception as e:
             logger.error(f"Error processing Binance message: {e}")
+            logger.debug(f"Raw message: {message}")
     
     def on_error(self, ws, error):
         """WebSocket error handler"""

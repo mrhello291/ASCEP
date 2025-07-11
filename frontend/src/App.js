@@ -9,6 +9,8 @@ import CEPRules from './components/CEPRules';
 import Navigation from './components/Navigation';
 import './App.css';
 
+console.log(process.env.REACT_APP_API_URL);
+
 function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [priceData, setPriceData] = useState({});
@@ -73,7 +75,7 @@ function App() {
 
   const fetchInitialData = async () => {
     try {
-      const backendUrl = process.env.REACT_APP_API_URL || '';
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       
       // Fetch current prices
       const pricesResponse = await fetch(`${backendUrl}/api/prices`);

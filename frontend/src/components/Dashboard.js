@@ -165,9 +165,9 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
           <div className="bg-gray-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm">Status</p>
             <p className={`text-lg font-semibold ${
-              systemStatus.status === 'healthy' ? 'text-green-400' : 'text-red-400'
+              systemStatus.overall_status === 'healthy' ? 'text-green-400' : 'text-red-400'
             }`}>
-              {systemStatus.status || 'Unknown'}
+              {systemStatus.overall_status || 'Unknown'}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">

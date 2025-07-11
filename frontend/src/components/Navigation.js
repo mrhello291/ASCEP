@@ -62,10 +62,10 @@ const Navigation = ({ isConnected, systemStatus }) => {
             </div>
             
             {/* System Status */}
-            {systemStatus.status && (
+            {systemStatus.overall_status && (
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  systemStatus.status === 'healthy' ? 'bg-green-400' : 'bg-red-400'
+                  systemStatus.overall_status === 'healthy' ? 'bg-green-400' : 'bg-red-400'
                 }`} />
                 <span className="text-sm text-gray-300">
                   {systemStatus.active_connections || 0} connections

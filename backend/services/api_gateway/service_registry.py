@@ -71,8 +71,20 @@ class ServiceRegistry:
         if not service['enabled']:
             return None
         
+        # Check if running in Docker Compose
+        if os.getenv('DOCKER_COMPOSE'):
+            # Use service names as hostnames in Docker Compose
+            service_hostnames = {
+                'health': 'health',
+                'price_feed': 'price_feeds',
+                'arbitrage': 'arbitrage',
+                'cep_engine': 'cep_engine',
+                'celery_worker': 'celery_worker'
+            }
+            hostname = service_hostnames.get(service_name, service_name)
+            return f"http://{hostname}:{service['port']}"
         # Check if running in Railway/production
-        if os.getenv('RAILWAY_ENVIRONMENT'):
+        elif os.getenv('RAILWAY_ENVIRONMENT'):
             return f"http://localhost:{service['port']}"
         else:
             return f"http://localhost:{service['port']}"

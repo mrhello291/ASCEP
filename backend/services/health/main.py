@@ -15,9 +15,15 @@ from health_service import app
 
 if __name__ == '__main__':
     import logging
+    import threading
+    from health_service import health_monitor_thread
     logging.basicConfig(level=logging.INFO)
     
     print("🚀 Starting ASCEP Health Service...")
     print("🏥 Service will be available at: http://localhost:5001")
+
+    # Start health monitor thread
+    monitor_thread = threading.Thread(target=health_monitor_thread, daemon=True)
+    monitor_thread.start()
     
     app.run(host='0.0.0.0', port=5001, debug=False) 

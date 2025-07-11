@@ -65,17 +65,29 @@ cd ../../..
 # Wait for health service
 wait_for_service "Health Service" 5001
 
-# 2. Start Price Feed Service (Port 5002)
+# 2. Start API Gateway (Port 5000) - Start early so other services can connect to it
+echo -e "${BLUE}🌐 Starting API Gateway...${NC}"
+cd backend/services/api_gateway
+python main.py &
+GATEWAY_PID=$!
+cd ../../..
+
+# Wait for API gateway
+wait_for_service "API Gateway" 5000
+
+# 3. Start Price Feed Service (Port 5002)
 echo -e "${BLUE}📊 Starting Price Feed Service...${NC}"
 cd backend/services/price_feeds
 python main.py &
 PRICE_FEED_PID=$!
 cd ../../..
 
-# Wait for price feed service
+# Wait for price feed service with extra time for full initialization
 wait_for_service "Price Feed Service" 5002
+echo -e "${YELLOW}⏳ Waiting additional time for Price Feed Service to fully initialize...${NC}"
+sleep 5
 
-# 3. Start Arbitrage Service (Port 5003)
+# 4. Start Arbitrage Service (Port 5003)
 echo -e "${BLUE}💰 Starting Arbitrage Service...${NC}"
 cd backend/services/arbitrage
 python main.py &
@@ -85,7 +97,7 @@ cd ../../..
 # Wait for arbitrage service
 wait_for_service "Arbitrage Service" 5003
 
-# 4. Start CEP Engine Service (Port 5004)
+# 5. Start CEP Engine Service (Port 5004)
 echo -e "${BLUE}🧠 Starting CEP Engine Service...${NC}"
 cd backend/services/cep_engine
 python main.py &
@@ -94,16 +106,6 @@ cd ../../..
 
 # Wait for CEP engine service
 wait_for_service "CEP Engine Service" 5004
-
-# 5. Start API Gateway (Port 5000) - Last, as it depends on all other services
-echo -e "${BLUE}🌐 Starting API Gateway...${NC}"
-cd backend/services/api_gateway
-python main.py &
-GATEWAY_PID=$!
-cd ../../..
-
-# Wait for API gateway
-wait_for_service "API Gateway" 5000
 
 # Display service status
 echo -e "${GREEN}"

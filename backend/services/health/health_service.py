@@ -64,22 +64,26 @@ except Exception as e:
 SERVICES = {
     'api_gateway': {
         'port': 5000,
-        'endpoint': '/',
+        'endpoint': '/api/health',
+        'host': 'api_gateway',
         'name': 'API Gateway'
     },
     'price_feed': {
         'port': 5002,
         'endpoint': '/health',
+        'host': 'price_feeds',
         'name': 'Price Feed Service'
     },
     'arbitrage': {
         'port': 5003,
         'endpoint': '/health',
+        'host': 'arbitrage',
         'name': 'Arbitrage Service'
     },
     'cep_engine': {
         'port': 5004,
         'endpoint': '/health',
+        'host': 'cep_engine',
         'name': 'CEP Engine Service'
     }
 }
@@ -94,7 +98,7 @@ health_status = {
 def check_service_health(service_name, config):
     """Check health of a specific service"""
     try:
-        url = f"http://localhost:{config['port']}{config['endpoint']}"
+        url = f"http://{config.get('host', 'localhost')}:{config['port']}{config['endpoint']}"
         start_time = time.time()
         response = requests.get(url, timeout=5)
         response_time = time.time() - start_time

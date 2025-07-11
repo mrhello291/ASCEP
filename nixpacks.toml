@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs_18", "redis", "pnpm"]
+nixPkgs = ["python311", "nodejs_18", "redis"]
 
 [phases.install]
 cmds = [

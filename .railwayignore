@@ -1,0 +1,17 @@
+# Ignore Docker files to force Nixpacks
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore build artifacts
+build/
+dist/
+node_modules/
+
+# Ignore logs
+*.log
+
+# Ignore environment files
+.env
+.env.local
+.env.production 

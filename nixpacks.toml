@@ -1,10 +1,10 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "python311", "gcc"]
+nixPkgs = ["python311", "nodejs_18", "redis", "pnpm"]
 
 [phases.install]
 cmds = [
-  "cd frontend && npm install -g pnpm && pnpm install --frozen-lockfile",
-  "pip install -r backend/requirements.txt"
+  "pip install -r backend/requirements.txt",
+  "cd frontend && pnpm install --frozen-lockfile"
 ]
 
 [phases.build]

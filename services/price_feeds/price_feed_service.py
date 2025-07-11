@@ -39,7 +39,7 @@ def send_price_to_backend(symbol, price, timestamp):
             'timestamp': timestamp
         }
         
-        # Get backend URL from environment
+        # Use localhost when running in same container, otherwise use environment variable
         backend_url = os.getenv('RAILWAY_STATIC_URL', 'http://localhost:5000')
         if not backend_url.startswith('http'):
             backend_url = f'https://{backend_url}'

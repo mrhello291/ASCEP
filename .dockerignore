@@ -2,23 +2,41 @@
 .git
 .gitignore
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Documentation
+README.md
+DEPLOYMENT.md
+MICROSERVICES-README.md
 
-# Python
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+dump.rdb
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
+.venv/
 
 # IDE
 .vscode/
@@ -30,42 +48,30 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
 
 # Railway
-.railway/
+railway.json
+.railway
 
-# Build outputs
+# Vercel
+vercel.json
+
+# Build artifacts
 build/
-dist/ 
+dist/
+*.egg-info/
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Temporary files
+tmp/
+temp/ 

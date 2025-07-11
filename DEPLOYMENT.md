@@ -16,16 +16,22 @@ This guide will help you deploy ASCEP to Railway (backend) and Vercel (frontend)
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
 4. Choose your ASCEP repository
-5. Railway will automatically detect the configuration
+5. Railway will automatically detect the Docker configuration
 
-### 1.2 Add Redis Service
+### 1.2 Docker Architecture
 
-**Important**: You need to add a Redis service to your Railway project:
+**Important**: This deployment uses Docker to run all services in a single container:
 
-1. In your Railway project dashboard, click "New Service"
-2. Select "Redis" from the template gallery
-3. Railway will automatically provision a Redis instance
-4. The Redis connection details will be automatically available as environment variables
+- **Redis**: Built-in Redis server (no external service needed)
+- **All Microservices**: Health, API Gateway, Price Feeds, Arbitrage, CEP Engine
+- **Nginx**: Reverse proxy and static file server
+- **Supervisor**: Process manager for all services
+
+**Benefits**:
+- Single container deployment
+- No external Redis dependency
+- Built-in load balancing and caching
+- Easier deployment and scaling
 
 ### 1.3 Configure Environment Variables
 
@@ -38,8 +44,7 @@ SECRET_KEY=your-secure-secret-key-here
 # Environment
 NODE_ENV=production
 
-# Redis variables will be automatically provided by Railway Redis service:
-# REDIS_URL, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+# Redis is built into the Docker container, no external service needed
 ```
 
 ### 1.4 Deploy
@@ -52,6 +57,8 @@ NODE_ENV=production
 
 Once deployed, Railway will provide a URL like:
 `https://your-project-name.railway.app`
+
+**Note**: The Docker container runs all services on port 5000, with Nginx serving as the main entry point.
 
 ## Step 2: Deploy Frontend to Vercel
 
@@ -100,41 +107,54 @@ After getting your Railway URL, update the frontend environment variable:
 ## Architecture Overview
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Vercel        │    │   Railway       │    │   Railway       │
-│   Frontend      │◄──►│   Backend       │◄──►│   Redis         │
-│   (React)       │    │   (Python)      │    │   (Service)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────────────────────────────┐
+│   Vercel        │    │   Railway Docker Container              │
+│   Frontend      │◄──►│   ┌─────────┐ ┌─────────┐ ┌─────────┐  │
+│   (React)       │    │   │  Nginx  │ │  Redis  │ │Supervisor│  │
+│                 │    │   │(Port 80)│ │(Port 6379)│ │(Manager) │  │
+│                 │    │   └─────────┘ └─────────┘ └─────────┘  │
+│                 │    │   ┌─────────┐ ┌─────────┐ ┌─────────┐  │
+│                 │    │   │  API    │ │ Price   │ │Arbitrage│  │
+│                 │    │   │Gateway  │ │ Feeds   │ │ Service │  │
+│                 │    │   └─────────┘ └─────────┘ └─────────┘  │
+│                 │    │   ┌─────────┐ ┌─────────┐              │
+│                 │    │   │ Health  │ │  CEP    │              │
+│                 │    │   │ Service │ │ Engine  │              │
+│                 │    │   └─────────┘ └─────────┘              │
+└─────────────────┘    └─────────────────────────────────────────┘
 ```
 
 - **Vercel**: Hosts the React frontend
-- **Railway Backend**: Hosts all Python microservices
-- **Railway Redis**: Provides Redis service for data storage and pub/sub
+- **Railway Docker Container**: Single container running all services
+  - **Nginx**: Reverse proxy and static file server
+  - **Redis**: Built-in Redis server for data storage and pub/sub
+  - **Supervisor**: Process manager for all microservices
+  - **All Microservices**: Health, API Gateway, Price Feeds, Arbitrage, CEP Engine
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **CORS Errors**: Make sure your Railway URL is correctly set in `REACT_APP_API_URL`
-2. **Redis Connection**: Ensure Redis service is added to your Railway project
+2. **Redis Connection**: Redis is built into the Docker container, no external service needed
 3. **Build Failures**: Check the build logs in Railway/Vercel
+4. **Service Startup**: Check supervisor logs if services fail to start
 
 ### Debugging
 
 1. **Railway Logs**: Check the deployment logs in Railway dashboard
 2. **Vercel Logs**: Check the build logs in Vercel dashboard
 3. **Health Check**: Visit `/api/health` endpoint to verify backend status
-4. **Redis Connection**: Check if Redis environment variables are available
+4. **Service Logs**: Check supervisor logs for individual service status
+5. **Nginx Logs**: Check nginx logs for proxy and static file serving
 
 ## Environment Variables Reference
 
 ### Railway (Backend)
 ```bash
-# Automatically provided by Railway Redis service:
-REDIS_URL=redis://your-redis-service.railway.app:6379
-REDIS_HOST=your-redis-service.railway.app
+# Redis is built into the Docker container:
+REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=your-redis-password
 
 # Manual configuration:
 SECRET_KEY=your-secure-secret-key-here
@@ -151,7 +171,8 @@ REACT_APP_API_URL=https://your-railway-url.railway.app
 - **Railway**: Monitor service health and logs in Railway dashboard
 - **Vercel**: Monitor frontend performance in Vercel dashboard
 - **Health Checks**: Use `/api/health` endpoint to monitor backend status
-- **Redis**: Monitor Redis service in Railway dashboard
+- **Supervisor**: Monitor all services through supervisor logs
+- **Nginx**: Monitor proxy and static file serving through nginx logs
 
 ## Updates
 
@@ -164,4 +185,4 @@ To update your deployment:
 
 - **Railway**: Pay only for what you use (CPU, memory, bandwidth)
 - **Vercel**: Free tier available for personal projects
-- **Redis**: Railway Redis service included in your Railway usage 
+- **Redis**: Built into the Docker container (no additional cost) 

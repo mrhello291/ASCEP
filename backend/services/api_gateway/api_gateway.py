@@ -1,0 +1,254 @@
+"""
+ASCEP API Gateway
+Routes requests to different microservices with latency monitoring
+"""
+
+import os
+import json
+import logging
+import requests
+import time
+from datetime import datetime
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import redis
+from dotenv import load_dotenv
+
+from service_registry import service_registry
+from latency_monitor import LatencyMonitor
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# Initialize CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+# Initialize Redis
+try:
+    redis_url = os.getenv('REDIS_URL')
+    if redis_url:
+        logger.info(f"🔗 Connecting to Redis via URL: {redis_url[:20]}...")
+        redis_client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5
+        )
+    else:
+        redis_host = os.getenv('REDIS_HOST') or os.getenv('REDISHOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT') or os.getenv('REDISPORT', 6379))
+        redis_password = os.getenv('REDIS_PASSWORD') or os.getenv('REDISPASSWORD')
+        
+        logger.info(f"🔗 Connecting to Redis at {redis_host}:{redis_port}")
+        redis_client = redis.Redis(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            db=0,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5
+        )
+    
+    redis_client.ping()
+    logger.info("✅ Redis connected successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Redis connection failed: {e}")
+    redis_client = None
+
+# Initialize latency monitor
+latency_monitor = LatencyMonitor(redis_client)
+
+def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
+    """Route request to appropriate service with latency monitoring"""
+    start_time = time.time()
+    
+    try:
+        # Get service URL from registry
+        service_url = service_registry.get_service_url(service_name)
+        if not service_url:
+            return jsonify({'error': f'Service {service_name} not found or disabled'}), 404
+        
+        # Build target URL
+        if endpoint:
+            target_url = f"{service_url}{endpoint}"
+        else:
+            target_url = service_url
+        
+        # Make request
+        if method == "GET":
+            response = requests.get(target_url, timeout=10)
+        elif method == "POST":
+            response = requests.post(target_url, json=request.get_json(), timeout=10)
+        elif method == "PUT":
+            response = requests.put(target_url, json=request.get_json(), timeout=10)
+        elif method == "DELETE":
+            response = requests.delete(target_url, timeout=10)
+        else:
+            return jsonify({'error': f'Unsupported method: {method}'}), 405
+        
+        # Calculate latency
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # Record latency
+        latency_monitor.record_request(
+            service_name=service_name,
+            endpoint=endpoint or "/",
+            method=method,
+            latency_ms=latency_ms,
+            status_code=response.status_code,
+            success=response.status_code < 400
+        )
+        
+        return jsonify(response.json()), response.status_code
+        
+    except requests.exceptions.Timeout:
+        latency_ms = (time.time() - start_time) * 1000
+        latency_monitor.record_request(
+            service_name=service_name,
+            endpoint=endpoint or "/",
+            method=method,
+            latency_ms=latency_ms,
+            status_code=408,
+            success=False
+        )
+        return jsonify({'error': 'Request timeout'}), 408
+        
+    except Exception as e:
+        latency_ms = (time.time() - start_time) * 1000
+        latency_monitor.record_request(
+            service_name=service_name,
+            endpoint=endpoint or "/",
+            method=method,
+            latency_ms=latency_ms,
+            status_code=500,
+            success=False
+        )
+        logger.error(f"Error routing request to {service_name}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint - aggregates all service health"""
+    return route_request("health", "/health")
+
+@app.route('/api/prices', methods=['GET', 'POST'])
+def price_routing():
+    """Route price requests to price feed service"""
+    if request.method == "GET":
+        return route_request("price_feed", "/prices", "GET")
+    else:
+        return route_request("price_feed", "/prices", "POST")
+
+@app.route('/api/signals', methods=['GET', 'POST'])
+def signal_routing():
+    """Route signal requests to arbitrage service"""
+    if request.method == "GET":
+        return route_request("arbitrage", "/signals", "GET")
+    else:
+        return route_request("arbitrage", "/signals", "POST")
+
+@app.route('/api/rules', methods=['GET', 'POST'])
+def rules_routing():
+    """Route CEP rules requests to CEP engine service"""
+    if request.method == "GET":
+        return route_request("cep_engine", "/rules", "GET")
+    else:
+        return route_request("cep_engine", "/rules", "POST")
+
+@app.route('/api/tasks', methods=['GET', 'POST'])
+def task_routing():
+    """Route task requests to celery worker service"""
+    if request.method == "GET":
+        return route_request("celery_worker", "/tasks", "GET")
+    else:
+        return route_request("celery_worker", "/tasks", "POST")
+
+@app.route('/api/latency', methods=['GET'])
+def latency_stats():
+    """Get latency statistics"""
+    service_name = request.args.get('service')
+    endpoint = request.args.get('endpoint')
+    
+    stats = latency_monitor.get_latency_stats(service_name, endpoint)
+    return jsonify(stats)
+
+@app.route('/api/services', methods=['GET'])
+def list_services():
+    """List all registered services"""
+    services = service_registry.get_all_services()
+    return jsonify({
+        'services': services,
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+# WebSocket event handlers
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    logger.info(f"Client connected: {request.sid}")
+    emit('connected', {'message': 'Connected to ASCEP API Gateway'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    logger.info(f"Client disconnected: {request.sid}")
+
+@socketio.on('subscribe_prices')
+def handle_price_subscription(data):
+    """Handle price subscription"""
+    logger.info(f"Price subscription request: {data}")
+    # Forward to price feed service via Redis pub/sub
+    if redis_client:
+        redis_client.publish('price_subscriptions', json.dumps(data))
+
+@socketio.on('subscribe_signals')
+def handle_signal_subscription():
+    """Handle signal subscription"""
+    logger.info("Signal subscription request")
+    # Forward to arbitrage service via Redis pub/sub
+    if redis_client:
+        redis_client.publish('signal_subscriptions', json.dumps({'action': 'subscribe'}))
+
+@app.route('/')
+def gateway_info():
+    """API Gateway information"""
+    services = service_registry.get_all_services()
+    return jsonify({
+        'service': 'ASCEP API Gateway',
+        'version': '1.0.0',
+        'timestamp': datetime.utcnow().isoformat(),
+        'services': list(services.keys()),
+        'endpoints': {
+            '/api/health': 'Health check for all services',
+            '/api/prices': 'Price data endpoints',
+            '/api/signals': 'Arbitrage signals endpoints',
+            '/api/rules': 'CEP rules endpoints',
+            '/api/tasks': 'Background task endpoints',
+            '/api/latency': 'Latency statistics',
+            '/api/services': 'List all services'
+        },
+        'features': [
+            'Service registry for easy service addition',
+            'Latency monitoring and statistics',
+            'WebSocket support',
+            'Redis pub/sub integration'
+        ]
+    })
+
+if __name__ == '__main__':
+    logger.info("🚀 Starting ASCEP API Gateway...")
+    logger.info(f"📊 Registered services: {list(service_registry.get_all_services().keys())}")
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True) 

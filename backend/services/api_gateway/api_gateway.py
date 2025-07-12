@@ -332,7 +332,4 @@ def gateway_info():
         ]
     })
 
-if __name__ == '__main__':
-    logger.info("🚀 Starting ASCEP API Gateway...")
-    logger.info(f"📊 Registered services: {list(service_registry.get_all_services().keys())}")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True) 
+# Entry point moved to main.py for proper module execution 

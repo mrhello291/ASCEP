@@ -56,9 +56,12 @@ try:
     
     print("\n🚀 STARTING ASCEP API GATEWAY SERVICE...")
     
-    # Get port from environment variable
-    port = int(os.getenv('PORT', 5000))
-    print(f"🌐 API Gateway will listen on port {port}")
+    # API Gateway listens on internal port 5000
+    # Nginx will proxy external $PORT to internal port 5000
+    port = 5000
+    external_port = os.getenv('PORT', 'unknown')
+    print(f"🌐 API Gateway will listen on internal port {port}")
+    print(f"🌐 External access via nginx on port {external_port}")
     
     # Start background tasks
     print("🔄 Starting background tasks...")
@@ -66,7 +69,13 @@ try:
     print("✅ Background tasks started")
     
     # Start the application
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    print(f"🚀 Starting Flask/SocketIO server on internal port {port}...")
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=port,
+        debug=False
+    )
     
 except Exception as e:
     print(f"❌ ERROR: {e}")

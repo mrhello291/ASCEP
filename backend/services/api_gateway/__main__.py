@@ -29,7 +29,7 @@ print(f"Current working directory: {os.getcwd()}")
 print(f"Service directory: {service_dir}")
 print(f"Python path: {sys.path[:3]}...")
 
-# Check environment variables
+# Check environment variable
 print("\n📋 ENVIRONMENT VARIABLES:")
 redis_url = os.getenv('REDIS_URL')
 redis_host = os.getenv('REDISHOST')

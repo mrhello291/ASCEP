@@ -1,119 +1,198 @@
 # ASCEP - Arbitrage Signal Complex Event Processing Platform
 
-A real-time, distributed event-driven system for detecting arbitrage opportunities in financial markets using complex event processing.
+A real-time, distributed microservices platform for detecting arbitrage opportunities in financial markets using complex event processing and WebSocket-based data streaming.
 
 ## 🚀 Features
 
-- **Multi-source Data Ingestion**: Connect to multiple price feeds (Binance WebSocket, Alpha Vantage, etc.)
-- **Real-time CEP Engine**: Apache Flink-based streaming rules engine
-- **Event Bus & Persistence**: Redis-based event streaming with persistence
-- **Real-time Web Dashboard**: React frontend with WebSocket updates
-- **Serverless Orchestration**: AWS Lambda functions for automation
-- **Monitoring & Resilience**: CloudWatch integration with circuit breakers
+- **Microservices Architecture**: Distributed services with API Gateway pattern
+- **Real-time Data Streaming**: WebSocket connections to Binance and mock price feeds
+- **Complex Event Processing**: Rule-based pattern detection and signal generation
+- **Arbitrage Detection**: Cross-currency and triangular arbitrage opportunities
+- **Real-time Dashboard**: React frontend with live WebSocket updates
+- **Health Monitoring**: Comprehensive service health checks and metrics
+- **Docker Deployment**: Containerized services for easy deployment
+- **Cloud Deployment**: Railway (backend) + Vercel (frontend) deployment
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Price Feeds   │    │   CEP Engine    │    │   Web Dashboard │
-│  (WebSocket)    │───▶│   (Flink)       │───▶│   (React)       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Event Bus     │    │   Persistence   │    │   Monitoring    │
-│   (Redis)       │    │   (S3/Parquet)  │    │ (CloudWatch)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+│   Frontend      │    │   API Gateway   │    │   Microservices │
+│   (React/Vercel)│◄──►│   (Port 5000)   │◄──►│                 │
+└─────────────────┘    └─────────────────┘    │  ┌─────────────┐ │
+                                              │  │ Health      │ │
+                                              │  │ (Port 5001) │ │
+                                              │  └─────────────┘ │
+                                              │  ┌─────────────┐ │
+                                              │  │ Price Feed  │ │
+                                              │  │ (Port 5002) │ │
+                                              │  └─────────────┘ │
+                                              │  ┌─────────────┐ │
+                                              │  │ Arbitrage   │ │
+                                              │  │ (Port 5003) │ │
+                                              │  └─────────────┘ │
+                                              │  ┌─────────────┐ │
+                                              │  │ CEP Engine  │ │
+                                              │  │ (Port 5004) │ │
+                                              │  └─────────────┘ │
+                                              └─────────────────┘
+                                                       │
+                                                       ▼
+                                              ┌─────────────────┐
+                                              │     Redis       │
+                                              │   Event Bus     │
+                                              └─────────────────┘
 ```
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Flask, Django Channels (WebSockets)
-- **Frontend**: React, Recharts, Monaco Editor
-- **Streaming**: Apache Flink, Redis
-- **Task Queue**: Celery
-- **Cloud**: AWS Lambda, CloudWatch
-- **Infrastructure**: Terraform, Docker
+### Backend (Microservices)
+- **Framework**: Flask 2.3.3+ with Flask-SocketIO
+- **Language**: Python 3.11+
+- **Event Streaming**: Redis 7+ (Pub/Sub)
+- **WebSockets**: Flask-SocketIO with Eventlet
+- **API Gateway**: Custom routing with latency monitoring
+- **Process Management**: Supervisor (production)
+
+### Frontend
+- **Framework**: React 18.2.0
+- **Build Tool**: Create React App
+- **Styling**: Tailwind CSS 3.2.7
+- **Charts**: Recharts 2.5.0
+- **Code Editor**: Monaco Editor 4.4.6
+- **Notifications**: React Hot Toast 2.4.0
+- **Icons**: Lucide React 0.263.1
+- **Package Manager**: pnpm
+
+### Infrastructure
+- **Containerization**: Docker & Docker Compose
+- **Cloud Backend**: Railway (Docker deployment)
+- **Cloud Frontend**: Vercel (Static hosting)
+- **Database**: Redis (in-memory + persistence)
+- **Process Manager**: Supervisor (production)
+
+### Development Tools
+- **Package Management**: pip (Python), pnpm (Node.js)
+- **Environment**: Python 3.11+, Node.js 18+
+- **Version Control**: Git
 
 ## 📁 Project Structure
 
 ```
 ASCEP/
-├── backend/                 # Flask/Django backend
-├── frontend/               # React frontend
-├── cep_engine/            # Apache Flink CEP engine
-├── data_ingestion/        # Price feed connectors
-├── infrastructure/        # Terraform configs
-├── monitoring/           # CloudWatch dashboards
-├── scripts/              # Deployment scripts
-└── docs/                 # Documentation
+├── backend/                     # Backend microservices
+│   ├── services/
+│   │   ├── api_gateway/        # API Gateway (Port 5000)
+│   │   ├── health/             # Health Service (Port 5001)
+│   │   ├── price_feeds/        # Price Feed Service (Port 5002)
+│   │   ├── arbitrage/          # Arbitrage Service (Port 5003)
+│   │   ├── cep_engine/         # CEP Engine Service (Port 5004)
+│   │   └── celery_worker/      # Background task processing
+│   └── requirements.txt        # Shared dependencies
+├── frontend/                   # React frontend application
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   └── App.js             # Main application
+│   ├── package.json           # Frontend dependencies
+│   └── tailwind.config.js     # Tailwind configuration
+├── docker-compose.yml         # Local development setup
+├── start_docker.sh           # Docker startup script
+├── Dockerfile.railway        # Railway deployment
+├── railway.json              # Railway configuration
+├── vercel.json               # Vercel configuration
+└── supervisord.conf          # Production process management
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python**: 3.12+ (recommended) or 3.13 (experimental)
+- **Python**: 3.11+ (recommended)
 - **Node.js**: 18+ 
-- **Redis**: Latest version
+- **Docker**: Latest version
 - **pnpm**: Latest version
+- **Redis**: Latest version (optional for local development)
 
-> **💡 Recommendation**: Use Python 3.12 for better package compatibility. Python 3.13 is still in development and many packages may have compatibility issues.
+### Local Development with Docker (Recommended)
 
-### Environment Check
-Before installing, check your environment:
+1. **Clone the repository**:
 ```bash
-python3 check_python.py
-```
-
-### Installation Options
-
-**Option 1: Automated Setup (Recommended)**
-```bash
-./setup.sh
-```
-
-**Option 2: Manual Installation**
-```bash
-# 1. Clone and setup
 git clone <your-repo>
 cd ASCEP
+```
 
-# 2. Backend (uses latest package versions)
+2. **Start all services with Docker**:
+```bash
+./start_docker.sh
+```
+
+3. **Access the application**:
+- Frontend: http://localhost:3000
+- API Gateway: http://localhost:5000
+- Health Check: http://localhost:5000/api/health
+
+### Manual Development Setup
+
+1. **Backend Setup**:
+```bash
 cd backend
 pip install -r requirements.txt
+cd services/api_gateway && pip install -r requirements.txt
+cd ../health && pip install -r requirements.txt
+cd ../price_feeds && pip install -r requirements.txt
+cd ../arbitrage && pip install -r requirements.txt
+cd ../cep_engine && pip install -r requirements.txt
+```
 
-# 3. Frontend (uses latest package versions)
-cd ../frontend
+2. **Frontend Setup**:
+```bash
+cd frontend
 pnpm install
 ```
 
-**Option 3: Minimal Installation (if you encounter issues)**
+3. **Start Redis** (if not using Docker):
 ```bash
-cd backend
-pip install -r requirements-minimal.txt
+redis-server
 ```
 
-3. **Start services**:
-   ```bash
-   # Start Redis
-   redis-server
-   
-   # Start backend
-   cd backend
-   python app.py
-   
-   # Start frontend
-   cd frontend
-   npm start
-   ```
+4. **Start Services**:
+```bash
+# Start API Gateway
+cd backend/services/api_gateway && python main.py
 
-## 📊 System Design Highlights
+# Start other services in separate terminals
+cd backend/services/health && python main.py
+cd backend/services/price_feeds && python main.py
+cd backend/services/arbitrage && python main.py
+cd backend/services/cep_engine && python main.py
 
-- **Event-Driven Architecture**: Real-time processing with minimal latency
+# Start Frontend
+cd frontend && pnpm start
+```
+
+## 🌐 API Endpoints
+
+### API Gateway (Port 5000)
+- `GET /` - Gateway information
+- `GET /api/health` - Health check for all services
+- `GET /api/prices` - Get current price data
+- `GET /api/signals` - Get arbitrage signals
+- `GET /api/rules` - Get CEP rules
+- `GET /api/latency` - Service latency statistics
+- `GET /api/services` - List all services
+
+### WebSocket Events
+- `price_update` - Real-time price updates
+- `arbitrage_signal` - New arbitrage signals
+- `subscribe_prices` - Subscribe to price updates
+- `subscribe_signals` - Subscribe to signal updates
+
+## 📊 System Features
+
+- **Real-time Processing**: < 200ms end-to-end latency
 - **Fault Tolerance**: Circuit breakers and fallback mechanisms
-- **Scalability**: Horizontal scaling with Redis and Celery
-- **Monitoring**: Comprehensive observability with CloudWatch
-- **Security**: IAM policies, KMS encryption, secure API endpoints
+- **Scalability**: Horizontal scaling with Redis pub/sub
+- **Monitoring**: Comprehensive health checks and metrics
+- **Security**: CORS configuration and environment-based secrets
 
 ## 🎯 CEP Rules Example
 
@@ -123,18 +202,41 @@ IF price("EUR/USD") - price("USD/EUR") > 0.001
 THEN ARBITRAGE_SIGNAL
 ```
 
+## 🚀 Deployment
+
+### Railway (Backend)
+- Single Docker container deployment
+- All microservices managed by Supervisor
+- Built-in Redis server
+- Automatic health checks
+
+### Vercel (Frontend)
+- Static site deployment
+- Automatic builds from Git
+- Global CDN distribution
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+## 📚 Documentation
+
+- [Microservices Architecture](./MICROSERVICES-README.md) - Detailed service documentation
+- [Deployment Guide](./DEPLOYMENT.md) - Railway and Vercel deployment
+- [API Documentation](./API-DOCUMENTATION.md) - Complete API reference
+- [Development Guide](./DEVELOPMENT.md) - Development setup and guidelines
+
+## 🔧 Development
+
+- **API Documentation**: Available at `/api/health` endpoint
+- **Testing**: pytest for backend, Jest for frontend
+- **Code Quality**: Black, flake8, ESLint
+- **Docker**: Containerized development environment
+
 ## 📈 Performance Targets
 
 - **Latency**: < 200ms end-to-end
 - **Uptime**: 99.9%
 - **Throughput**: 10,000+ events/second
-
-## 🔧 Development
-
-- **API Documentation**: `/docs` endpoint
-- **Testing**: pytest for backend, Jest for frontend
-- **CI/CD**: GitHub Actions pipeline
-- **Code Quality**: Black, flake8, ESLint
+- **Real-time Updates**: WebSocket-based streaming
 
 ## 📝 License
 

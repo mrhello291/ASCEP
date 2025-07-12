@@ -101,33 +101,69 @@ current_signals_count = 0
 
 def check_service_health(service_name, config):
     """Check health of a specific service"""
+    url = f"http://{config.get('host', 'localhost')}:{config['port']}{config['endpoint']}"
+    logger.info(f"🔍 Checking {service_name} at {url}")
+    
     try:
-        url = f"http://{config.get('host', 'localhost')}:{config['port']}{config['endpoint']}"
         start_time = time.time()
         response = requests.get(url, timeout=5)
         response_time = time.time() - start_time
         
         if response.status_code == 200:
+            logger.info(f"   ✅ {service_name} responded with status {response.status_code} in {response_time:.3f}s")
             return {
                 'status': 'healthy',
                 'response_time': response_time,
                 'last_check': datetime.utcnow().isoformat(),
-                'error': None
+                'error': None,
+                'response_body': response.text[:500] if response.text else None
             }
         else:
+            logger.warning(f"   ❌ {service_name} returned HTTP {response.status_code} in {response_time:.3f}s")
             return {
                 'status': 'unhealthy',
                 'response_time': response_time,
                 'last_check': datetime.utcnow().isoformat(),
-                'error': f"HTTP {response.status_code}"
+                'error': f"HTTP {response.status_code}",
+                'response_body': response.text[:500] if response.text else None,
+                'url_tested': url
             }
     
-    except Exception as e:
+    except requests.exceptions.Timeout:
+        logger.error(f"   ⏰ {service_name} TIMEOUT: Request timed out after 5 seconds")
         return {
             'status': 'unhealthy',
             'response_time': None,
             'last_check': datetime.utcnow().isoformat(),
-            'error': str(e)
+            'error': 'TIMEOUT: Request timed out after 5 seconds',
+            'url_tested': url,
+            'timeout_seconds': 5
+        }
+    
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"   🔌 {service_name} CONNECTION_ERROR: {str(e)}")
+        return {
+            'status': 'unhealthy',
+            'response_time': None,
+            'last_check': datetime.utcnow().isoformat(),
+            'error': f'CONNECTION_ERROR: {str(e)}',
+            'url_tested': url,
+            'connection_details': {
+                'host': config.get('host', 'localhost'),
+                'port': config['port'],
+                'endpoint': config['endpoint']
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"   💥 {service_name} EXCEPTION: {str(e)}")
+        return {
+            'status': 'unhealthy',
+            'response_time': None,
+            'last_check': datetime.utcnow().isoformat(),
+            'error': f'EXCEPTION: {str(e)}',
+            'url_tested': url,
+            'exception_type': type(e).__name__
         }
 
 def update_health_status():
@@ -220,6 +256,16 @@ def health_check():
         except Exception as e:
             logger.error(f"Error getting Redis data: {e}")
     
+    # Add detailed error summary
+    error_summary = {}
+    for service_name, service_data in health_status['services'].items():
+        if service_data['status'] == 'unhealthy':
+            error_summary[service_name] = {
+                'error': service_data['error'],
+                'url_tested': service_data.get('url_tested'),
+                'last_check': service_data['last_check']
+            }
+    
     return jsonify({
         'service': 'Health Service',
         'status': 'healthy',
@@ -229,7 +275,9 @@ def health_check():
         'last_check': health_status['last_check'],
         'signals_count': signals_count,
         'last_signal_update': last_signal_update,
-        'price_feeds_count': price_feeds_count
+        'price_feeds_count': price_feeds_count,
+        'error_summary': error_summary,
+        'redis_connected': redis_client is not None
     })
 
 @app.route('/status', methods=['GET'])

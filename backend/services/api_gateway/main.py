@@ -31,7 +31,7 @@ try:
     
     # Test basic dependencies first
     print("Testing Flask...")
-    import Flask
+    from flask import Flask
     print("✅ Flask imported successfully")
     
     print("Testing Flask-SocketIO...")
@@ -43,15 +43,15 @@ try:
     print("✅ Redis imported successfully")
     
     print("Importing service_registry...")
-    from service_registry import service_registry
+    from .service_registry import service_registry
     print("✅ service_registry imported successfully")
     
     print("Importing latency_monitor...")
-    from latency_monitor import LatencyMonitor
+    from .latency_monitor import LatencyMonitor
     print("✅ latency_monitor imported successfully")
     
     print("Importing api_gateway...")
-    from api_gateway import app, socketio, start_background_tasks
+    from .api_gateway import app, socketio, start_background_tasks
     print("✅ API Gateway import successful")
     
     print("\n🚀 STARTING ASCEP API GATEWAY SERVICE...")

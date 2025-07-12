@@ -11,12 +11,12 @@ import sys
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from health_service import app
+from .health_service import app
 
 if __name__ == '__main__':
     import logging
     import threading
-    from health_service import health_monitor_thread, redis_monitor_thread
+    from .health_service import health_monitor_thread, redis_monitor_thread
     logging.basicConfig(level=logging.INFO)
     
     print("🚀 Starting ASCEP Health Service...")

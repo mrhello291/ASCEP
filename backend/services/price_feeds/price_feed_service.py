@@ -3,20 +3,6 @@
 ASCEP Price Feed Service
 Standalone service for running price feeds on Railway
 """
-
-import os
-import sys
-import time
-import requests
-import json
-import redis
-import logging
-import threading
-from datetime import datetime
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-
-# Remove data_ingestion path logic and import price_feeds directly
 import os
 import sys
 import time

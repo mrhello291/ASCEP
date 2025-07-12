@@ -13,7 +13,7 @@ import logging
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from arbitrage_service import app, arbitrage_detection_thread, redis_price_listener
+from .arbitrage_service import app, arbitrage_detection_thread, redis_price_listener
 
 def start_background_threads():
     """Start background threads for arbitrage detection and Redis listening"""

@@ -15,8 +15,8 @@ from flask_socketio import SocketIO, emit
 import redis
 from dotenv import load_dotenv
 
-from .service_registry import service_registry
-from .latency_monitor import LatencyMonitor
+from service_registry import service_registry
+from latency_monitor import LatencyMonitor
 
 # Load environment variables
 load_dotenv()

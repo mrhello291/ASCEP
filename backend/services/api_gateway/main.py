@@ -7,69 +7,89 @@ Main entry point for the API Gateway service
 import os
 import sys
 import traceback
+import logging
+
+# Configure logging to output to both stderr and stdout for maximum visibility
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stderr),
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True
+)
+logger = logging.getLogger(__name__)
+
+# Force immediate output
+sys.stderr.flush()
+sys.stdout.flush()
+
+# Also print to stdout as backup (for Railway logs)
+print("🚀 ASCEP API GATEWAY STARTING - LOGGING CONFIGURED", flush=True)
 
 # Add the service directory to Python path
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-print("=" * 80)
-print("🚀 STARTING ASCEP API GATEWAY SERVICE")
-print("=" * 80)
-print(f"Current working directory: {os.getcwd()}")
-print(f"Service directory: {service_dir}")
+logger.critical("=" * 80)
+logger.critical("🚀 STARTING ASCEP API GATEWAY SERVICE")
+logger.critical("=" * 80)
+logger.info(f"Current working directory: {os.getcwd()}")
+logger.info(f"Service directory: {service_dir}")
 
 # Check environment variables
-print("\n📋 ENVIRONMENT VARIABLES:")
-print(f"PORT: {os.getenv('PORT')}")
-print(f"REDIS_URL: {'SET' if os.getenv('REDIS_URL') else 'NOT SET'}")
-print(f"DEBUG: {os.getenv('DEBUG')}")
-print(f"RAILWAY_ENVIRONMENT: {os.getenv('RAILWAY_ENVIRONMENT')}")
-print(f"DOCKER_COMPOSE: {os.getenv('DOCKER_COMPOSE')}")
+logger.info("📋 ENVIRONMENT VARIABLES:")
+logger.info(f"PORT: {os.getenv('PORT')}")
+logger.info(f"REDIS_URL: {'SET' if os.getenv('REDIS_URL') else 'NOT SET'}")
+logger.info(f"DEBUG: {os.getenv('DEBUG')}")
+logger.info(f"RAILWAY_ENVIRONMENT: {os.getenv('RAILWAY_ENVIRONMENT')}")
+logger.info(f"DOCKER_COMPOSE: {os.getenv('DOCKER_COMPOSE')}")
 
 try:
-    print("\n1️⃣ TESTING IMPORTS...")
+    logger.info("1️⃣ TESTING IMPORTS...")
     
     # Test basic dependencies first
-    print("Testing Flask...")
+    logger.info("Testing Flask...")
     from flask import Flask
-    print("✅ Flask imported successfully")
+    logger.info("✅ Flask imported successfully")
     
-    print("Testing Flask-SocketIO...")
+    logger.info("Testing Flask-SocketIO...")
     import flask_socketio
-    print("✅ Flask-SocketIO imported successfully")
+    logger.info("✅ Flask-SocketIO imported successfully")
     
-    print("Testing Redis...")
+    logger.info("Testing Redis...")
     import redis
-    print("✅ Redis imported successfully")
+    logger.info("✅ Redis imported successfully")
     
-    print("Importing service_registry...")
+    logger.info("Importing service_registry...")
     from .service_registry import service_registry
-    print("✅ service_registry imported successfully")
+    logger.info("✅ service_registry imported successfully")
     
-    print("Importing latency_monitor...")
+    logger.info("Importing latency_monitor...")
     from .latency_monitor import LatencyMonitor
-    print("✅ latency_monitor imported successfully")
+    logger.info("✅ latency_monitor imported successfully")
     
-    print("Importing api_gateway...")
+    logger.info("Importing api_gateway...")
     from .api_gateway import app, socketio, start_background_tasks
-    print("✅ API Gateway import successful")
+    logger.info("✅ API Gateway import successful")
     
-    print("\n🚀 STARTING ASCEP API GATEWAY SERVICE...")
+    logger.info("🚀 STARTING ASCEP API GATEWAY SERVICE...")
     
     # API Gateway listens on internal port 5000
     # Nginx will proxy external $PORT to internal port 5000
     port = 5000
     external_port = os.getenv('PORT', 'unknown')
-    print(f"🌐 API Gateway will listen on internal port {port}")
-    print(f"🌐 External access via nginx on port {external_port}")
+    logger.info(f"🌐 API Gateway will listen on internal port {port}")
+    logger.info(f"🌐 External access via nginx on port {external_port}")
     
     # Start background tasks
-    print("🔄 Starting background tasks...")
+    logger.info("🔄 Starting background tasks...")
     start_background_tasks()
-    print("✅ Background tasks started")
+    logger.info("✅ Background tasks started")
     
     # Start the application
-    print(f"🚀 Starting Flask/SocketIO server on internal port {port}...")
+    logger.info(f"🚀 Starting Flask/SocketIO server on internal port {port}...")
     socketio.run(
         app,
         host='0.0.0.0',
@@ -78,7 +98,7 @@ try:
     )
     
 except Exception as e:
-    print(f"❌ ERROR: {e}")
-    print("Full traceback:")
-    traceback.print_exc()
+    logger.error(f"❌ ERROR: {e}")
+    logger.error("Full traceback:")
+    logger.error(traceback.format_exc())
     sys.exit(1) 

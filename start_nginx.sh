@@ -1,3 +1,10 @@
+#!/bin/bash
+
+# Get port from environment variable
+PORT=${PORT:-5000}
+
+# Generate nginx config with correct port
+cat > /etc/nginx/nginx.conf << EOF
 events {
     worker_connections 1024;
 }
@@ -17,7 +24,7 @@ http {
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
     # Rate limiting
-    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
 
     # Upstream for API gateway
     upstream api_gateway {
@@ -25,7 +32,7 @@ http {
     }
 
     server {
-        listen $PORT;
+        listen ${PORT};
         server_name _;
 
         # Security headers
@@ -38,10 +45,10 @@ http {
         location /api/ {
             limit_req zone=api burst=20 nodelay;
             proxy_pass http://api_gateway;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
             proxy_connect_timeout 30s;
             proxy_send_timeout 30s;
             proxy_read_timeout 30s;
@@ -51,21 +58,30 @@ http {
         location /socket.io/ {
             proxy_pass http://api_gateway;
             proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Upgrade \$http_upgrade;
             proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
         }
 
-        # Health check
+        # Health check - Railway expects /api/health
+        location /api/health {
+            proxy_pass http://api_gateway/api/health;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+
+        # Also support /health for compatibility
         location /health {
             proxy_pass http://api_gateway/api/health;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
         }
 
         # API only - frontend is served by Vercel
@@ -80,4 +96,8 @@ http {
             root /usr/share/nginx/html;
         }
     }
-} 
+}
+EOF
+
+echo "Generated nginx config for port ${PORT}"
+nginx -g "daemon off;" 

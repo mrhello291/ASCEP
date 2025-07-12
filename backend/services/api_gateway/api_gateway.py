@@ -215,8 +215,16 @@ def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint - aggregates all service health"""
-    return route_request("health", "/health")
+    """Health check endpoint - direct health check for API Gateway"""
+    return jsonify({
+        'service': 'ASCEP API Gateway',
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'redis_connected': redis_client is not None,
+        'services_registered': list(service_registry.get_all_services().keys()),
+        'port': os.getenv('PORT', '5000'),
+        'host': '0.0.0.0'
+    }), 200
 
 @app.route('/api/prices', methods=['GET', 'POST'])
 def price_routing():

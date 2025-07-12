@@ -4,6 +4,7 @@ Monitors health of all microservices
 """
 
 import os
+import sys
 import json
 import logging
 import requests
@@ -18,8 +19,15 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)  # Ensure output goes to stdout for Railway
+    ],
+    force=True  # Override any existing logging configuration
+)
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
@@ -102,6 +110,9 @@ current_signals_count = 0
 def check_service_health(service_name, config):
     """Check health of a specific service"""
     url = f"http://{config.get('host', 'localhost')}:{config['port']}{config['endpoint']}"
+    
+    # Use both logger and print for maximum visibility in Railway
+    print(f"🔍 HEALTH CHECK: Checking {service_name} at {url}")
     logger.info(f"🔍 Checking {service_name} at {url}")
     
     try:
@@ -110,6 +121,7 @@ def check_service_health(service_name, config):
         response_time = time.time() - start_time
         
         if response.status_code == 200:
+            print(f"   ✅ HEALTH SUCCESS: {service_name} responded with status {response.status_code} in {response_time:.3f}s")
             logger.info(f"   ✅ {service_name} responded with status {response.status_code} in {response_time:.3f}s")
             return {
                 'status': 'healthy',
@@ -119,6 +131,7 @@ def check_service_health(service_name, config):
                 'response_body': response.text[:500] if response.text else None
             }
         else:
+            print(f"   ❌ HEALTH ERROR: {service_name} returned HTTP {response.status_code} in {response_time:.3f}s")
             logger.warning(f"   ❌ {service_name} returned HTTP {response.status_code} in {response_time:.3f}s")
             return {
                 'status': 'unhealthy',
@@ -130,6 +143,7 @@ def check_service_health(service_name, config):
             }
     
     except requests.exceptions.Timeout:
+        print(f"   ⏰ HEALTH TIMEOUT: {service_name} TIMEOUT: Request timed out after 5 seconds")
         logger.error(f"   ⏰ {service_name} TIMEOUT: Request timed out after 5 seconds")
         return {
             'status': 'unhealthy',
@@ -141,6 +155,7 @@ def check_service_health(service_name, config):
         }
     
     except requests.exceptions.ConnectionError as e:
+        print(f"   🔌 HEALTH CONNECTION ERROR: {service_name} CONNECTION_ERROR: {str(e)}")
         logger.error(f"   🔌 {service_name} CONNECTION_ERROR: {str(e)}")
         return {
             'status': 'unhealthy',
@@ -156,6 +171,7 @@ def check_service_health(service_name, config):
         }
     
     except Exception as e:
+        print(f"   💥 HEALTH EXCEPTION: {service_name} EXCEPTION: {str(e)}")
         logger.error(f"   💥 {service_name} EXCEPTION: {str(e)}")
         return {
             'status': 'unhealthy',
@@ -332,19 +348,30 @@ def service_info():
     })
 
 if __name__ == '__main__':
+    print("=" * 80)
+    print("🚀 STARTING ASCEP HEALTH SERVICE")
+    print("=" * 80)
+    print(f"📊 Monitoring {len(SERVICES)} services")
+    print(f"🔍 Services to monitor: {list(SERVICES.keys())}")
+    print("=" * 80)
+    
     logger.info("🚀 Starting ASCEP Health Service...")
     logger.info(f"📊 Monitoring {len(SERVICES)} services")
     
     # Start health monitoring thread
     monitor_thread = threading.Thread(target=health_monitor_thread, daemon=True)
     monitor_thread.start()
+    print("✅ Health monitoring thread started")
     
     # Start Redis monitoring thread
     redis_monitor_thread = threading.Thread(target=redis_monitor_thread, daemon=True)
     redis_monitor_thread.start()
+    print("✅ Redis monitoring thread started")
     
     # Initial health check
+    print("🔍 Running initial health check...")
     update_health_status()
     
+    print("✅ Health service started and ready!")
     logger.info("✅ Health service started!")
     app.run(host='0.0.0.0', port=5001, debug=False) 

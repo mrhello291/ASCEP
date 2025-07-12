@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from .service_registry import service_registry
 from .latency_monitor import LatencyMonitor
 
-# Load environment variables
+# Load environment variable
 load_dotenv()
 
 # Configure logging

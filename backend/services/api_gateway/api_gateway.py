@@ -136,12 +136,14 @@ def redis_arbitrage_signals_listener():
                 logger.error(f"Failed to reconnect to arbitrage signals Redis: {reconnect_error}")
                 socketio.sleep(5)  # Wait before retrying
 
-# Start the listeners as Socket.IO background tasks
-socketio.start_background_task(redis_price_update_listener)
-socketio.start_background_task(redis_arbitrage_signals_listener)
-
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)
+
+# Function to start background tasks (called after app is ready)
+def start_background_tasks():
+    """Start background tasks for Redis monitoring"""
+    socketio.start_background_task(redis_price_update_listener)
+    socketio.start_background_task(redis_arbitrage_signals_listener)
 
 def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
     """Route request to appropriate service with latency monitoring"""

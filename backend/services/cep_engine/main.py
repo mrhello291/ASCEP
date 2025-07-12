@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from .cep_engine_service import app
+from backend.services.cep_engine.cep_engine_service import app
 
 if __name__ == '__main__':
     logger.info("🚀 Starting ASCEP CEP Engine Service...")

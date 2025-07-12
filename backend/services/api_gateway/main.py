@@ -63,15 +63,15 @@ try:
     logger.info("✅ Redis imported successfully")
     
     logger.info("Importing service_registry...")
-    from .service_registry import service_registry
+    from backend.services.api_gateway.service_registry import service_registry
     logger.info("✅ service_registry imported successfully")
     
     logger.info("Importing latency_monitor...")
-    from .latency_monitor import LatencyMonitor
+    from backend.services.api_gateway.latency_monitor import LatencyMonitor
     logger.info("✅ latency_monitor imported successfully")
     
     logger.info("Importing api_gateway...")
-    from .api_gateway import app, socketio, start_background_tasks
+    from backend.services.api_gateway.api_gateway import app, socketio, start_background_tasks
     logger.info("✅ API Gateway import successful")
     
     logger.info("🚀 STARTING ASCEP API GATEWAY SERVICE...")

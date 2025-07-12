@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from .health_service import app
+from backend.services.health.health_service import app
 
 if __name__ == '__main__':
     import threading
-    from .health_service import health_monitor_thread, redis_monitor_thread
+    from backend.services.health.health_service import health_monitor_thread, redis_monitor_thread
     
     logger.info("🚀 Starting ASCEP Health Service...")
     logger.info("🏥 Service will be available at: http://localhost:5001")

@@ -3,6 +3,14 @@
 # Get port from environment variable
 PORT=${PORT:-5000}
 
+echo "================================================================================
+🌐 STARTING NGINX
+================================================================================"
+echo "📋 Nginx Configuration:"
+echo "  PORT: ${PORT}"
+echo "  API Gateway: localhost:5000"
+echo "  External Access: localhost:${PORT}"
+
 # Generate nginx config with correct port
 cat > /etc/nginx/nginx.conf << EOF
 events {

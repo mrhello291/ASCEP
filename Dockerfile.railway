@@ -33,12 +33,13 @@ COPY backend/ ./backend/
 # Copy configuration files
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY start_nginx.sh /app/start_nginx.sh
+COPY start_services.sh /app/start_services.sh
 
 # Create necessary directories
 RUN mkdir -p /var/log/supervisor /var/log/nginx
 
-# Expose port
+# Expose port (Railway will override this with PORT environment variable)
 EXPOSE 5000
 
-# Start supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 
+# Start services with proper environment setup
+CMD ["/app/start_services.sh"] 

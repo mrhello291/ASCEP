@@ -147,9 +147,9 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
             <div className="ml-4">
               <p className="text-gray-400 text-sm">System Status</p>
               <p className={`text-lg font-semibold ${
-                systemStatus.overall_status === 'healthy' ? 'text-green-400' : 'text-red-400'
+                systemStatus.status === 'healthy' ? 'text-green-400' : 'text-red-400'
               }`}>
-                {systemStatus.overall_status || 'Unknown'}
+                {systemStatus.status || 'Unknown'}
               </p>
             </div>
           </div>
@@ -363,27 +363,24 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
 
       {/* System Status */}
       <div className="bg-gray-800 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-white mb-4">System Status</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">Time</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Status</p>
-            <p className={`text-lg font-semibold ${
-              systemStatus.overall_status === 'healthy' ? 'text-green-400' : 'text-red-400'
-            }`}>
-              {systemStatus.overall_status || 'Unknown'}
-            </p>
-          </div>
-          <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Price Feeds</p>
-            <p className="text-lg font-semibold text-white">
-              {systemStatus.price_feeds || 0}
-            </p>
+            <p className="text-gray-400 text-sm">Current Time (UTC)</p>
+            <div className="text-lg font-semibold text-white">
+              {new Date().toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
+            </div>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm">Last Signal Update (UTC)</p>
-            <p className="text-lg font-semibold text-white">
-              {systemStatus.last_signal_update ? 
-                new Date(systemStatus.last_signal_update).toLocaleTimeString('en-US', {
+            <div className="text-lg font-semibold text-white">
+              {systemStatus.timestamp ? 
+                new Date(systemStatus.timestamp).toLocaleTimeString('en-US', {
                   hour12: false,
                   year: 'numeric',
                   month: '2-digit',
@@ -394,10 +391,10 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
                 }) : 
                 'N/A'
               }
-            </p>
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              {systemStatus.last_signal_update ? 
-                `${Math.floor((Date.now() - new Date(systemStatus.last_signal_update + 'Z').getTime()) / 1000)}s ago` : 
+              {systemStatus.timestamp ? 
+                `${Math.floor((Date.now() - new Date(systemStatus.timestamp + 'Z').getTime()) / 1000)}s ago` : 
                 ''
               }
             </p>

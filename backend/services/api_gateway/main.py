@@ -76,12 +76,9 @@ try:
     
     logger.info("🚀 STARTING ASCEP API GATEWAY SERVICE...")
     
-    # API Gateway listens on internal port 5000
-    # Nginx will proxy external $PORT to internal port 5000
-    port = 5000
-    external_port = os.getenv('PORT', 'unknown')
-    logger.info(f"🌐 API Gateway will listen on internal port {port}")
-    logger.info(f"🌐 External access via nginx on port {external_port}")
+    # API Gateway listens directly on Railway's $PORT
+    port = int(os.getenv('PORT', 5000))
+    logger.info(f"🌐 API Gateway will listen directly on port {port}")
     
     # Start background tasks
     logger.info("🔄 Starting background tasks...")
@@ -90,12 +87,25 @@ try:
     
     # Start the application
     logger.info(f"🚀 Starting Flask/SocketIO server on internal port {port}...")
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=port,
-        debug=False
-    )
+    
+    # Add error handling for port binding
+    try:
+        socketio.run(
+            app,
+            host='0.0.0.0',
+            port=port,
+            debug=False
+        )
+    except OSError as e:
+        if "Address already in use" in str(e):
+            logger.error(f"❌ Port {port} is already in use. This might be because:")
+            logger.error(f"   - Another service is running on port {port}")
+            logger.error(f"   - A previous instance didn't shut down properly")
+            logger.error(f"   - Railway environment has port conflicts")
+            logger.error(f"   - Try using a different port")
+        else:
+            logger.error(f"❌ SocketIO startup error: {e}")
+        raise
     
 except Exception as e:
     logger.error(f"❌ ERROR: {e}")

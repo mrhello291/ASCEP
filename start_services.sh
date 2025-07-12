@@ -11,17 +11,15 @@ echo "📋 Environment Configuration:"
 echo "  PORT: ${PORT} (Railway external port)"
 echo "  REDIS_URL: ${REDIS_URL:+SET}"
 echo "  DEBUG: ${DEBUG}"
-echo "  Note: Internal services use port 5000, external access uses ${PORT}"
+echo "  Note: API Gateway listens directly on ${PORT}, other services use internal ports"
 
 # Export environment variables for all services
-export API_GATEWAY_URL="http://localhost:5000"
-export API_GATEWAY_EXTERNAL_URL="http://localhost:${PORT}"
+export API_GATEWAY_URL="http://localhost:${PORT}"
 export RAILWAY_ENVIRONMENT=true
 # Note: DOCKER_COMPOSE is not set, so services will use localhost
 
 echo "🔧 Service Configuration:"
-echo "  API_GATEWAY_URL: ${API_GATEWAY_URL} (internal communication)"
-echo "  API_GATEWAY_EXTERNAL_URL: ${API_GATEWAY_EXTERNAL_URL} (external access)"
+echo "  API_GATEWAY_URL: ${API_GATEWAY_URL} (direct access)"
 echo "  RAILWAY_ENVIRONMENT: ${RAILWAY_ENVIRONMENT}"
 echo "  DOCKER_COMPOSE: [NOT SET - using localhost for service communication]"
 

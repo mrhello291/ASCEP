@@ -13,3 +13,4 @@
 - Fix the trading signals in HFT dashboard
 - Make use of arbitrage opportunities in advanced features and show it by default
 - Add CEP rule according to convenience
+- Use advanced algorithms like Bellman ford to calculate arbritrage opportunaties. Similarly use best algorithms wherever possible

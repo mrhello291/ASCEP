@@ -376,7 +376,7 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
               })}
             </div>
           </div>
-          <div className="bg-gray-700 rounded-lg p-4">
+          {/* <div className="bg-gray-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm">Last Signal Update (UTC)</p>
             <div className="text-lg font-semibold text-white">
               {systemStatus.timestamp ? 
@@ -398,7 +398,7 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
                 ''
               }
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

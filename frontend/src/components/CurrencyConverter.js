@@ -300,99 +300,97 @@ const CurrencyConverter = ({ priceData, isConnected }) => {
       {/* Advanced Features */}
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-white flex items-center">
+          {/* <h2 className="text-xl font-semibold text-white flex items-center">
             <Zap className="mr-2" size={20} />
             Advanced Features
-          </h2>
-          <button
+          </h2> */}
+          {/* <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="text-blue-400 hover:text-blue-300"
           >
             {showAdvanced ? 'Hide' : 'Show'} Advanced
-          </button>
+          </button> */}
         </div>
 
-        {showAdvanced && (
-          <div className="space-y-6">
-            {/* Conversion History Chart */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Conversion History</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={prepareConversionChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
-                  <YAxis stroke="#9CA3AF" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1f2937', 
-                      border: '1px solid #374151',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Line type="monotone" dataKey="rate" stroke="#3B82F6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        <div className="space-y-6">
+          {/* Conversion History Chart */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3">Conversion History</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={prepareConversionChartData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
+                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Line type="monotone" dataKey="rate" stroke="#3B82F6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
 
-            {/* Arbitrage Opportunities */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                <Target className="mr-2" size={18} />
-                Arbitrage Opportunities
-              </h3>
-              {arbitrageOpportunities.length > 0 ? (
-                <div className="space-y-2">
-                  {arbitrageOpportunities.map((opp, index) => (
-                    <div key={index} className="bg-gray-700 rounded p-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-white font-medium">{opp.path}</p>
-                          <p className="text-gray-400 text-sm">
-                            Rates: {opp.rates.map(r => r.toFixed(4)).join(' × ')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-green-400 font-semibold">
-                            +{opp.profit.toFixed(3)}%
-                          </p>
-                          <p className="text-gray-400 text-sm">Profit</p>
-                        </div>
+          {/* Arbitrage Opportunities */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <Target className="mr-2" size={18} />
+              Arbitrage Opportunities
+            </h3>
+            {arbitrageOpportunities.length > 0 ? (
+              <div className="space-y-2">
+                {arbitrageOpportunities.map((opp, index) => (
+                  <div key={index} className="bg-gray-700 rounded p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-white font-medium">{opp.path}</p>
+                        <p className="text-gray-400 text-sm">
+                          Rates: {opp.rates.map(r => r.toFixed(4)).join(' × ')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-green-400 font-semibold">
+                          +{opp.profit.toFixed(3)}%
+                        </p>
+                        <p className="text-gray-400 text-sm">Profit</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-gray-700 rounded p-4 text-center">
-                  <p className="text-gray-400">No significant arbitrage opportunities detected</p>
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-gray-700 rounded p-4 text-center">
+                <p className="text-gray-400">No significant arbitrage opportunities detected</p>
+              </div>
+            )}
+          </div>
 
-            {/* Market Analysis */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                <BarChart3 className="mr-2" size={18} />
-                Market Analysis
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gray-700 rounded p-3">
-                  <p className="text-gray-400 text-sm">Total Pairs</p>
-                  <p className="text-white font-semibold text-xl">{Object.keys(priceData).length}</p>
-                </div>
-                <div className="bg-gray-700 rounded p-3">
-                  <p className="text-gray-400 text-sm">Active Currencies</p>
-                  <p className="text-white font-semibold text-xl">{currencies.length}</p>
-                </div>
-                <div className="bg-gray-700 rounded p-3">
-                  <p className="text-gray-400 text-sm">Conversion Rate</p>
-                  <p className="text-white font-semibold text-xl">
-                    {conversionRate > 0 ? 'Active' : 'Inactive'}
-                  </p>
-                </div>
+          {/* Market Analysis */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <BarChart3 className="mr-2" size={18} />
+              Market Analysis
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-700 rounded p-3">
+                <p className="text-gray-400 text-sm">Total Pairs</p>
+                <p className="text-white font-semibold text-xl">{Object.keys(priceData).length}</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <p className="text-gray-400 text-sm">Active Currencies</p>
+                <p className="text-white font-semibold text-xl">{currencies.length}</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <p className="text-gray-400 text-sm">Conversion Rate</p>
+                <p className="text-white font-semibold text-xl">
+                  {conversionRate > 0 ? 'Active' : 'Inactive'}
+                </p>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Recent Conversions */}

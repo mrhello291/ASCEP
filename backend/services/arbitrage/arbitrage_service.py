@@ -230,10 +230,10 @@ def arbitrage_detection_thread():
     while True:
         try:
             detect_arbitrage_opportunities()
-            time.sleep(1)  # Check every 1 second for real-time performance
+            # No sleep - run as fast as possible for real-time performance
         except Exception as e:
             logger.error(f"Arbitrage detection thread error: {e}")
-            time.sleep(5)  # Wait 5 seconds on error before retrying
+            time.sleep(1)  # Only sleep on error to prevent infinite error loops
 
 def redis_price_listener():
     """Listen for price updates from Redis"""

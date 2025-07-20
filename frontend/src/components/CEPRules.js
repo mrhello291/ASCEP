@@ -2,79 +2,115 @@ import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { Save, Plus, Trash2, Code, Settings } from 'lucide-react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const CEPRules = ({ isConnected }) => {
   const [rules, setRules] = useState([]);
   const [selectedRule, setSelectedRule] = useState(null);
   const [newRule, setNewRule] = useState({
-    id: '',
     name: '',
-    description: '',
-    definition: `// Example CEP Rule
-IF price('EUR/USD') - price('USD/EUR') > 0.001 
-THEN ARBITRAGE_SIGNAL
-`,
+    pattern: '',
+    action: '',
+    conditions: {},
     enabled: true
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Mock rules for demo
+  // Fetch rules from backend
   useEffect(() => {
-    setRules([
-      {
-        id: 'rule_001',
-        name: 'EUR/USD Arbitrage',
-        description: 'Detect arbitrage between EUR/USD and USD/EUR',
-        definition: `IF price('EUR/USD') - price('USD/EUR') > 0.001 
-THEN ARBITRAGE_SIGNAL`,
-        enabled: true,
-        created: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: 'rule_002',
-        name: 'GBP/USD Spread',
-        description: 'Monitor GBP/USD spread opportunities',
-        definition: `IF price('GBP/USD') - price('USD/GBP') > 0.002 
-THEN ARBITRAGE_SIGNAL`,
-        enabled: false,
-        created: '2024-01-14T15:45:00Z'
+    const fetchRules = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/api/rules`);
+        const data = await res.json();
+        setRules(data.rules || []);
+      } catch (err) {
+        setError('Failed to fetch rules');
+      } finally {
+        setLoading(false);
       }
-    ]);
+    };
+    fetchRules();
   }, []);
 
-  const handleSaveRule = () => {
-    if (!newRule.id || !newRule.name) {
-      alert('Please provide rule ID and name');
+  // Add new rule
+  const handleSaveRule = async () => {
+    if (!newRule.name || !newRule.pattern || !newRule.action) {
+      alert('Please provide name, pattern, and action');
       return;
     }
-
-    const ruleToSave = {
-      ...newRule,
-      created: new Date().toISOString()
-    };
-
-    setRules([...rules, ruleToSave]);
-    setNewRule({
-      id: '',
-      name: '',
-      description: '',
-      definition: `// Example CEP Rule
-IF price('EUR/USD') - price('USD/EUR') > 0.001 
-THEN ARBITRAGE_SIGNAL
-`,
-      enabled: true
-    });
-  };
-
-  const handleDeleteRule = (ruleId) => {
-    setRules(rules.filter(rule => rule.id !== ruleId));
-    if (selectedRule?.id === ruleId) {
-      setSelectedRule(null);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRule)
+      });
+      const data = await res.json();
+      if (data.rule) setRules(rules => [...rules, data.rule]);
+      setNewRule({ name: '', pattern: '', action: '', conditions: {}, enabled: true });
+    } catch (err) {
+      setError('Failed to add rule');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleToggleRule = (ruleId) => {
-    setRules(rules.map(rule => 
-      rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
-    ));
+  // Enable/disable rule
+  const handleToggleRule = async (rule) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/rules/${rule.rule_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !rule.enabled })
+      });
+      const data = await res.json();
+      if (data.rule) setRules(rules => rules.map(r => r.rule_id === rule.rule_id ? data.rule : r));
+    } catch (err) {
+      setError('Failed to update rule');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete rule
+  const handleDeleteRule = async (rule) => {
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/api/rules/${rule.rule_id}`, { method: 'DELETE' });
+      setRules(rules => rules.filter(r => r.rule_id !== rule.rule_id));
+      if (selectedRule?.rule_id === rule.rule_id) setSelectedRule(null);
+    } catch (err) {
+      setError('Failed to delete rule');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save changes to rule (e.g., after editing)
+  const handleSaveChanges = async () => {
+    if (!selectedRule) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/rules/${selectedRule.rule_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedRule)
+      });
+      const data = await res.json();
+      if (data.rule) setRules(rules => rules.map(r => r.rule_id === data.rule.rule_id ? data.rule : r));
+    } catch (err) {
+      setError('Failed to save changes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle editor changes
+  const handleEditorChange = (value) => {
+    setSelectedRule({ ...selectedRule, pattern: value });
   };
 
   return (
@@ -88,6 +124,9 @@ THEN ARBITRAGE_SIGNAL
           Define and manage Complex Event Processing rules
         </p>
       </div>
+
+      {error && <div className="bg-red-800 text-red-200 p-2 rounded">{error}</div>}
+      {loading && <div className="text-gray-400">Loading...</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Rules List */}
@@ -105,9 +144,9 @@ THEN ARBITRAGE_SIGNAL
           <div className="space-y-3">
             {rules.map((rule) => (
               <div 
-                key={rule.id} 
+                key={rule.rule_id} 
                 className={`bg-gray-700 rounded-lg p-4 cursor-pointer transition-colors ${
-                  selectedRule?.id === rule.id ? 'ring-2 ring-blue-500' : 'hover:bg-gray-600'
+                  selectedRule?.rule_id === rule.rule_id ? 'ring-2 ring-blue-500' : 'hover:bg-gray-600'
                 }`}
                 onClick={() => setSelectedRule(rule)}
               >
@@ -121,16 +160,16 @@ THEN ARBITRAGE_SIGNAL
                         {rule.enabled ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <p className="text-gray-400 text-sm">{rule.description}</p>
+                    <p className="text-gray-400 text-sm">{rule.pattern}</p>
                     <p className="text-gray-500 text-xs mt-1">
-                      Created: {new Date(rule.created).toLocaleDateString()}
+                      Created: {rule.created_at ? new Date(rule.created_at).toLocaleDateString() : ''}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        handleToggleRule(rule.id);
+                        await handleToggleRule(rule);
                       }}
                       className={`px-3 py-1 rounded text-xs font-medium ${
                         rule.enabled 
@@ -141,9 +180,9 @@ THEN ARBITRAGE_SIGNAL
                       {rule.enabled ? 'Disable' : 'Enable'}
                     </button>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        handleDeleteRule(rule.id);
+                        await handleDeleteRule(rule);
                       }}
                       className="p-1 text-red-400 hover:text-red-300"
                     >
@@ -160,16 +199,6 @@ THEN ARBITRAGE_SIGNAL
             <h3 className="text-lg font-semibold text-white mb-4">Add New Rule</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Rule ID</label>
-                <input
-                  type="text"
-                  value={newRule.id}
-                  onChange={(e) => setNewRule({...newRule, id: e.target.value})}
-                  className="w-full bg-gray-600 text-white px-3 py-2 rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="rule_003"
-                />
-              </div>
-              <div>
                 <label className="block text-gray-400 text-sm mb-1">Name</label>
                 <input
                   type="text"
@@ -180,13 +209,23 @@ THEN ARBITRAGE_SIGNAL
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Description</label>
+                <label className="block text-gray-400 text-sm mb-1">Pattern</label>
                 <input
                   type="text"
-                  value={newRule.description}
-                  onChange={(e) => setNewRule({...newRule, description: e.target.value})}
+                  value={newRule.pattern}
+                  onChange={(e) => setNewRule({...newRule, pattern: e.target.value})}
                   className="w-full bg-gray-600 text-white px-3 py-2 rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="Rule description"
+                  placeholder="Pattern (e.g. price_spike)"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Action</label>
+                <input
+                  type="text"
+                  value={newRule.action}
+                  onChange={(e) => setNewRule({...newRule, action: e.target.value})}
+                  className="w-full bg-gray-600 text-white px-3 py-2 rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
+                  placeholder="Action (e.g. create_signal)"
                 />
               </div>
               <button
@@ -214,15 +253,15 @@ THEN ARBITRAGE_SIGNAL
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">{selectedRule.name}</h3>
-                <p className="text-gray-400 text-sm mb-4">{selectedRule.description}</p>
+                <p className="text-gray-400 text-sm mb-4">{selectedRule.pattern}</p>
               </div>
-              
               <div className="bg-gray-900 rounded-lg overflow-hidden">
                 <Editor
                   height="400px"
                   defaultLanguage="javascript"
-                  value={selectedRule.definition}
+                  value={selectedRule.pattern}
                   theme="vs-dark"
+                  onChange={handleEditorChange}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 14,
@@ -233,7 +272,6 @@ THEN ARBITRAGE_SIGNAL
                   }}
                 />
               </div>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -242,16 +280,19 @@ THEN ARBITRAGE_SIGNAL
                     {selectedRule.enabled ? 'Active' : 'Inactive'}
                   </span>
                   <span className="text-gray-400 text-sm">
-                    ID: {selectedRule.id}
+                    ID: {selectedRule.rule_id}
                   </span>
                 </div>
-                <button className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors">
+                <button
+                  onClick={handleSaveChanges}
+                  className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors"
+                >
                   <Save size={16} />
                   <span>Save Changes</span>
                 </button>
               </div>
             </div>
-          ) : (
+          ) :
             <div className="text-center py-12">
               <Settings className="mx-auto text-gray-400 mb-4" size={48} />
               <h3 className="text-xl font-semibold text-white mb-2">
@@ -261,7 +302,7 @@ THEN ARBITRAGE_SIGNAL
                 Choose a rule from the list to edit its definition
               </p>
             </div>
-          )}
+          }
         </div>
       </div>
 
@@ -276,7 +317,6 @@ THEN ARBITRAGE_SIGNAL
 THEN ARBITRAGE_SIGNAL`}
             </pre>
           </div>
-          
           <div className="bg-gray-700 rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Volume Threshold</h3>
             <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
@@ -285,7 +325,6 @@ THEN ARBITRAGE_SIGNAL`}
 THEN HIGH_VOLUME_SIGNAL`}
             </pre>
           </div>
-          
           <div className="bg-gray-700 rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Price Movement</h3>
             <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
@@ -293,7 +332,6 @@ THEN HIGH_VOLUME_SIGNAL`}
 THEN PRICE_SPIKE_SIGNAL`}
             </pre>
           </div>
-          
           <div className="bg-gray-700 rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Cross-Pair Correlation</h3>
             <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">

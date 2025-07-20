@@ -68,7 +68,7 @@ active_patterns = {}
 class CEPRule:
     """CEP Rule class for managing complex event processing rules"""
     
-    def __init__(self, rule_id, name, pattern, action, conditions=None):
+    def __init__(self, rule_id, name, pattern, action, conditions=None, enabled=True):
         self.rule_id = rule_id
         self.name = name
         self.pattern = pattern
@@ -77,6 +77,7 @@ class CEPRule:
         self.created_at = datetime.utcnow().isoformat()
         self.last_triggered = None
         self.trigger_count = 0
+        self.enabled = enabled
     
     def to_dict(self):
         return {
@@ -87,7 +88,8 @@ class CEPRule:
             'conditions': self.conditions,
             'created_at': self.created_at,
             'last_triggered': self.last_triggered,
-            'trigger_count': self.trigger_count
+            'trigger_count': self.trigger_count,
+            'enabled': self.enabled
         }
     
     def evaluate(self, event_data):
@@ -216,6 +218,8 @@ def process_event(event_data):
         triggered_rules = []
         
         for rule in cep_rules.values():
+            if not getattr(rule, 'enabled', True):
+                continue
             if rule.evaluate(event_data):
                 rule.trigger(event_data)
                 triggered_rules.append(rule.rule_id)
@@ -298,7 +302,8 @@ def create_rule():
             name=data['name'],
             pattern=data['pattern'],
             action=data['action'],
-            conditions=data.get('conditions', {})
+            conditions=data.get('conditions', {}),
+            enabled=data.get('enabled', True)
         )
         
         cep_rules[rule_id_counter] = rule
@@ -349,6 +354,8 @@ def update_rule(rule_id):
             rule.action = data['action']
         if 'conditions' in data:
             rule.conditions = data['conditions']
+        if 'enabled' in data:
+            rule.enabled = data['enabled']
         
         # Update in Redis
         if redis_client:
@@ -461,7 +468,8 @@ if __name__ == '__main__':
                     name=rule_dict['name'],
                     pattern=rule_dict['pattern'],
                     action=rule_dict['action'],
-                    conditions=rule_dict.get('conditions', {})
+                    conditions=rule_dict.get('conditions', {}),
+                    enabled=rule_dict.get('enabled', True)
                 )
                 rule.last_triggered = rule_dict.get('last_triggered')
                 rule.trigger_count = rule_dict.get('trigger_count', 0)

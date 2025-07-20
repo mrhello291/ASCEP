@@ -12,8 +12,7 @@ const Navigation = ({ isConnected, systemStatus }) => {
     { path: '/converter', label: 'Converter', icon: Calculator },
     { path: '/comparison', label: 'Analysis', icon: Globe },
     { path: '/hft', label: 'HFT Dashboard', icon: Zap },
-    // Only show signals if we have signals data
-    ...(systemStatus?.signals_count > 0 ? [{ path: '/signals', label: 'Signals', icon: TrendingUp }] : []),
+    { path: '/signals', label: 'Signals', icon: TrendingUp },
     { path: '/rules', label: 'CEP Rules', icon: Settings },
   ];
 

@@ -58,6 +58,11 @@ function App() {
       setSignals(prev => [signal, ...prev.slice(0, 49)]); // Keep last 50 signals
     });
 
+    // Listen for system status updates via WebSocket
+    newSocket.on('system_status', (status) => {
+      setSystemStatus(status);
+    });
+
     newSocket.on('connected', (data) => {
       console.log('Backend message:', data.message);
     });
@@ -66,24 +71,12 @@ function App() {
       console.log('Subscription confirmed:', data);
     });
 
-    // Fetch initial data
+    // Fetch initial data (bootstrapping)
     fetchInitialData();
-
-    // Set up periodic refresh for signals (every 30 seconds)
-    const signalsInterval = setInterval(() => {
-      fetchSignals();
-    }, 30000);
-
-    // Set up periodic refresh for system status (every 10 seconds)
-    const statusInterval = setInterval(() => {
-      fetchSystemStatus();
-    }, 10000);
 
     // Cleanup on unmount
     return () => {
       newSocket.close();
-      clearInterval(signalsInterval);
-      clearInterval(statusInterval);
     };
   }, []);
 

@@ -16,6 +16,8 @@ const CEPRules = ({ isConnected }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showConditions, setShowConditions] = useState(false);
+  const [conditionsText, setConditionsText] = useState('{}');
 
   // Fetch rules from backend
   useEffect(() => {
@@ -40,16 +42,35 @@ const CEPRules = ({ isConnected }) => {
       alert('Please provide name, pattern, and action');
       return;
     }
+
+    // Parse conditions if provided
+    let conditions = {};
+    if (showConditions && conditionsText.trim() !== '{}') {
+      try {
+        conditions = JSON.parse(conditionsText);
+      } catch (err) {
+        alert('Invalid JSON in conditions field');
+        return;
+      }
+    }
+
+    const ruleToCreate = {
+      ...newRule,
+      conditions
+    };
+
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newRule)
+        body: JSON.stringify(ruleToCreate)
       });
       const data = await res.json();
       if (data.rule) setRules(rules => [...rules, data.rule]);
       setNewRule({ name: '', pattern: '', action: '', conditions: {}, enabled: true });
+      setConditionsText('{}');
+      setShowConditions(false);
     } catch (err) {
       setError('Failed to add rule');
     } finally {
@@ -228,6 +249,38 @@ const CEPRules = ({ isConnected }) => {
                   placeholder="Action (e.g. create_signal)"
                 />
               </div>
+              
+              {/* Conditions Toggle */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="showConditions"
+                  checked={showConditions}
+                  onChange={(e) => setShowConditions(e.target.checked)}
+                  className="rounded border-gray-500"
+                />
+                <label htmlFor="showConditions" className="text-gray-400 text-sm">
+                  Add custom conditions (optional)
+                </label>
+              </div>
+
+              {/* Conditions Field */}
+              {showConditions && (
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Conditions (JSON)</label>
+                  <textarea
+                    value={conditionsText}
+                    onChange={(e) => setConditionsText(e.target.value)}
+                    className="w-full bg-gray-600 text-white px-3 py-2 rounded border border-gray-500 focus:border-blue-500 focus:outline-none font-mono text-sm"
+                    rows={4}
+                    placeholder='{"price_change_threshold": 3.0}'
+                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    Example: {'{"price_change_threshold": 3.0}'} for price_spike pattern
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={handleSaveRule}
                 className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
@@ -311,33 +364,127 @@ const CEPRules = ({ isConnected }) => {
         <h2 className="text-xl font-semibold text-white mb-4">Rule Templates</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-white mb-2">Basic Arbitrage</h3>
-            <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
-{`IF price('EUR/USD') - price('USD/EUR') > 0.001 
-THEN ARBITRAGE_SIGNAL`}
-            </pre>
+            <h3 className="font-semibold text-white mb-2">Price Spike (3% threshold)</h3>
+            <p className="text-gray-400 text-sm mb-2">Name: Price Spike Detection</p>
+            <p className="text-gray-400 text-sm mb-2">Pattern: price_spike</p>
+            <p className="text-gray-400 text-sm mb-2">Action: create_signal</p>
+            <p className="text-gray-400 text-sm mb-2">Conditions: {'{"price_change_threshold": 3.0}'}</p>
           </div>
+          
           <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-white mb-2">Volume Threshold</h3>
-            <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
-{`IF volume('EUR/USD') > 1000000 AND 
-   price('EUR/USD') > 1.1000 
-THEN HIGH_VOLUME_SIGNAL`}
-            </pre>
+            <h3 className="font-semibold text-white mb-2">Volume Surge</h3>
+            <p className="text-gray-400 text-sm mb-2">Name: High Volume Alert</p>
+            <p className="text-gray-400 text-sm mb-2">Pattern: volume_surge</p>
+            <p className="text-gray-400 text-sm mb-2">Action: send_alert</p>
+            <p className="text-gray-400 text-sm mb-2">Conditions: {'{"volume_threshold": 2000000}'}</p>
           </div>
+          
           <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-white mb-2">Price Movement</h3>
-            <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
-{`IF price_change('EUR/USD', '5m') > 0.005 
-THEN PRICE_SPIKE_SIGNAL`}
-            </pre>
+            <h3 className="font-semibold text-white mb-2">Arbitrage Opportunity</h3>
+            <p className="text-gray-400 text-sm mb-2">Name: Arbitrage Detection</p>
+            <p className="text-gray-400 text-sm mb-2">Pattern: arbitrage_opportunity</p>
+            <p className="text-gray-400 text-sm mb-2">Action: create_signal</p>
+            <p className="text-gray-400 text-sm mb-2">Conditions: {'{"spread_threshold": 0.2}'}</p>
           </div>
+          
           <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-white mb-2">Cross-Pair Correlation</h3>
-            <pre className="text-gray-300 text-sm bg-gray-800 p-3 rounded overflow-x-auto">
-{`IF correlation('EUR/USD', 'GBP/USD') > 0.8 
-THEN CORRELATION_SIGNAL`}
-            </pre>
+            <h3 className="font-semibold text-white mb-2">Custom Pattern</h3>
+            <p className="text-gray-400 text-sm mb-2">Name: Custom Alert</p>
+            <p className="text-gray-400 text-sm mb-2">Pattern: my_custom_pattern</p>
+            <p className="text-gray-400 text-sm mb-2">Action: log_event</p>
+            <p className="text-gray-400 text-sm mb-2">Conditions: {'{"custom_condition": "BTC"}'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Supported Patterns and Actions */}
+      <div className="bg-gray-800 rounded-lg p-6 mt-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Supported Patterns & Actions</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Supported Patterns */}
+          <div>
+            <h3 className="text-lg font-semibold text-blue-400 mb-3">Supported Patterns</h3>
+            <div className="space-y-2">
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">price_spike</code>
+                <p className="text-gray-400 text-sm mt-1">Detects sudden price movements</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">volume_surge</code>
+                <p className="text-gray-400 text-sm mt-1">Detects unusual trading volume</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">arbitrage_opportunity</code>
+                <p className="text-gray-400 text-sm mt-1">Detects price differences across exchanges</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">trend_reversal</code>
+                <p className="text-gray-400 text-sm mt-1">Detects trend direction changes</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">support_resistance</code>
+                <p className="text-gray-400 text-sm mt-1">Detects support/resistance level breaks</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-green-400 font-mono">custom_pattern</code>
+                <p className="text-gray-400 text-sm mt-1">Your own custom pattern name</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Supported Actions */}
+          <div>
+            <h3 className="text-lg font-semibold text-purple-400 mb-3">Supported Actions</h3>
+            <div className="space-y-2">
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">create_signal</code>
+                <p className="text-gray-400 text-sm mt-1">Creates a trading signal</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">send_alert</code>
+                <p className="text-gray-400 text-sm mt-1">Sends notification alert</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">log_event</code>
+                <p className="text-gray-400 text-sm mt-1">Logs the event to system</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">trigger_order</code>
+                <p className="text-gray-400 text-sm mt-1">Triggers automated order</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">update_dashboard</code>
+                <p className="text-gray-400 text-sm mt-1">Updates dashboard display</p>
+              </div>
+              <div className="bg-gray-700 rounded p-3">
+                <code className="text-purple-400 font-mono">custom_action</code>
+                <p className="text-gray-400 text-sm mt-1">Your own custom action name</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Common Conditions */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-yellow-400 mb-3">Common Conditions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-700 rounded p-3">
+              <code className="text-yellow-400 font-mono">{"price_change_threshold"}</code>
+              <p className="text-gray-400 text-sm mt-1">Percentage threshold for price changes (e.g., 3.0 for 3%)</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <code className="text-yellow-400 font-mono">{"volume_threshold"}</code>
+              <p className="text-gray-400 text-sm mt-1">Minimum volume required (e.g., 2000000)</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <code className="text-yellow-400 font-mono">{"spread_threshold"}</code>
+              <p className="text-gray-400 text-sm mt-1">Minimum spread for arbitrage (e.g., 0.2)</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <code className="text-yellow-400 font-mono">{"symbol"}</code>
+              <p className="text-gray-400 text-sm mt-1">Specific trading pair (e.g., "BTC/USD")</p>
+            </div>
           </div>
         </div>
       </div>

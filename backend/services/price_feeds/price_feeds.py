@@ -290,12 +290,12 @@ class MockPriceFeed(PriceFeed):
                     self.last_prices[symbol] = new_price
                     self.notify_callbacks(symbol, new_price, timestamp)
                 
-                # Update every 2 seconds
-                time.sleep(2)
+                # Update every 0.5 seconds for real-time performance
+                time.sleep(0.5)
                 
             except Exception as e:
                 logger.error(f"Error in mock update loop: {e}")
-                time.sleep(5)
+                time.sleep(1)  # Reduced wait time on error
 
 class PriceFeedManager:
     """Manager for multiple price feeds"""

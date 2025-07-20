@@ -89,7 +89,7 @@ def redis_price_update_listener():
                 except Exception as e:
                     logger.error(f"Error emitting price update: {e}")
             # yield to eventlet
-            socketio.sleep(0.1)
+            socketio.sleep(0.01)  # Faster updates for real-time performance
         except Exception as e:
             logger.error(f"Redis listener error: {e}")
             # Try to reconnect
@@ -100,7 +100,7 @@ def redis_price_update_listener():
                 logger.info("Reconnected to Redis pub/sub")
             except Exception as reconnect_error:
                 logger.error(f"Failed to reconnect to Redis: {reconnect_error}")
-                socketio.sleep(5)  # Wait before retrying
+                socketio.sleep(1)  # Reduced wait time before retrying
 
 def redis_arbitrage_signals_listener():
     if not redis_client:
@@ -123,7 +123,7 @@ def redis_arbitrage_signals_listener():
                 except Exception as e:
                     logger.error(f"Error emitting arbitrage signal: {e}")
             # yield to eventlet
-            socketio.sleep(0.1)
+            socketio.sleep(0.01)  # Faster updates for real-time performance
         except Exception as e:
             logger.error(f"Arbitrage signals Redis listener error: {e}")
             # Try to reconnect
@@ -134,7 +134,7 @@ def redis_arbitrage_signals_listener():
                 logger.info("Reconnected to arbitrage signals Redis pub/sub")
             except Exception as reconnect_error:
                 logger.error(f"Failed to reconnect to arbitrage signals Redis: {reconnect_error}")
-                socketio.sleep(5)  # Wait before retrying
+                socketio.sleep(1)  # Reduced wait time before retrying
 
 def redis_cep_signals_listener():
     if not redis_client:
@@ -173,7 +173,7 @@ def redis_cep_signals_listener():
                 except Exception as e:
                     logger.error(f"Error emitting CEP signal: {e}")
             # yield to eventlet
-            socketio.sleep(0.1)
+            socketio.sleep(0.01)  # Faster updates for real-time performance
         except Exception as e:
             logger.error(f"CEP signals Redis listener error: {e}")
             # Try to reconnect
@@ -184,7 +184,7 @@ def redis_cep_signals_listener():
                 logger.info("Reconnected to CEP signals Redis pub/sub")
             except Exception as reconnect_error:
                 logger.error(f"Failed to reconnect to CEP signals Redis: {reconnect_error}")
-                socketio.sleep(5)  # Wait before retrying
+                socketio.sleep(1)  # Reduced wait time before retrying
 
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)

@@ -364,8 +364,8 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
       {/* System Status */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Time</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-700 rounded-lg p-4">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="bg-gray-700 rounded-lg p-4 flex flex-col items-center justify-center">
             <p className="text-gray-400 text-sm">Current Time (UTC)</p>
             <div className="text-lg font-semibold text-white">
               {new Date().toLocaleTimeString('en-US', {

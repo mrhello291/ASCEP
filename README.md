@@ -1,6 +1,6 @@
 # ASCEP - Arbitrage Signal Complex Event Processing Platform
 
-A real-time, distributed microservices platform for detecting arbitrage opportunities in financial markets using complex event processing and WebSocket-based data streaming.
+A real-time, distributed microservices platform for detecting arbitrage opportunities in financial markets using complex event processing and WebSocket-based data streaming. BUilt it to experiment with finance data signals
 
 ## 🚀 Features
 

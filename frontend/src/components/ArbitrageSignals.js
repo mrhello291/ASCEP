@@ -94,6 +94,94 @@ const ArbitrageSignals = ({ signals, isConnected }) => {
         </div>
       </div>
 
+      {/* CEP Rule Statistics */}
+      <div className="bg-gray-800 rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">CEP Rule Performance</h2>
+        
+        {(() => {
+          // Calculate rule statistics
+          const ruleStats = {};
+          signals.forEach(signal => {
+            if (signal.rule_id) {
+              if (!ruleStats[signal.rule_id]) {
+                ruleStats[signal.rule_id] = {
+                  rule_id: signal.rule_id,
+                  rule_name: signal.rule_name || `Rule #${signal.rule_id}`,
+                  pattern: signal.pattern || 'Unknown',
+                  count: 0,
+                  avg_spread: 0,
+                  total_spread: 0,
+                  last_triggered: null
+                };
+              }
+              ruleStats[signal.rule_id].count++;
+              ruleStats[signal.rule_id].total_spread += signal.spread_percentage || 0;
+              ruleStats[signal.rule_id].avg_spread = ruleStats[signal.rule_id].total_spread / ruleStats[signal.rule_id].count;
+              
+              const signalTime = new Date(signal.timestamp);
+              if (!ruleStats[signal.rule_id].last_triggered || signalTime > new Date(ruleStats[signal.rule_id].last_triggered)) {
+                ruleStats[signal.rule_id].last_triggered = signal.timestamp;
+              }
+            }
+          });
+
+          const ruleStatsArray = Object.values(ruleStats).sort((a, b) => b.count - a.count);
+
+          return ruleStatsArray.length > 0 ? (
+            <div className="space-y-4">
+              {ruleStatsArray.map((rule, index) => (
+                <div key={rule.rule_id} className="bg-gray-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{rule.rule_name}</h3>
+                        <p className="text-gray-400 text-sm">Pattern: {rule.pattern}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-400">{rule.count}</p>
+                      <p className="text-gray-400 text-sm">signals</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Average Spread</p>
+                      <p className="text-lg font-semibold text-white">
+                        {rule.avg_spread.toFixed(2)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Rule ID</p>
+                      <p className="text-lg font-semibold text-white">#{rule.rule_id}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Last Triggered</p>
+                      <p className="text-lg font-semibold text-white">
+                        {rule.last_triggered ? new Date(rule.last_triggered).toLocaleTimeString() : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">No CEP Rules Triggered Yet</h3>
+              <p className="text-gray-400">
+                Create and enable CEP rules to see their performance statistics here
+              </p>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Signals List */}
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
@@ -130,19 +218,47 @@ const ArbitrageSignals = ({ signals, isConnected }) => {
                       </div>
                       
                       <div>
-                        <p className="text-gray-400 text-sm">Threshold</p>
+                        <p className="text-gray-400 text-sm">Spread %</p>
                         <p className="text-lg font-semibold text-white">
-                          {formatSpread(signal.threshold)}
+                          {signal.spread_percentage ? `${signal.spread_percentage.toFixed(2)}%` : 'N/A'}
                         </p>
                       </div>
                       
                       <div>
-                        <p className="text-gray-400 text-sm">Rule ID</p>
+                        <p className="text-gray-400 text-sm">Type</p>
                         <p className="text-lg font-semibold text-white">
-                          {signal.rule_id || 'N/A'}
+                          {signal.type || 'arbitrage'}
                         </p>
                       </div>
                     </div>
+
+                    {/* CEP Rule Information */}
+                    {signal.rule_id && (
+                      <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                          <p className="text-blue-400 text-sm font-medium">Triggered by CEP Rule</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-400">Rule Name:</p>
+                            <p className="text-white font-medium">{signal.rule_name || `Rule #${signal.rule_id}`}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Pattern:</p>
+                            <p className="text-white font-medium">{signal.pattern || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Rule ID:</p>
+                            <p className="text-white font-medium">#{signal.rule_id}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Severity:</p>
+                            <p className="text-white font-medium">{signal.severity || 'medium'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="text-right">

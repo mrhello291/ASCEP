@@ -488,6 +488,181 @@ const CEPRules = ({ isConnected }) => {
           </div>
         </div>
       </div>
+
+      {/* Custom Pattern Instructions */}
+      <div className="bg-gray-800 rounded-lg p-6 mt-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Creating Custom Patterns</h2>
+        
+        <div className="space-y-6">
+          {/* Step-by-Step Guide */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-green-400 mb-3">Step-by-Step Guide</h3>
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3">
+                <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">1</div>
+                <div>
+                  <p className="text-white font-medium">Choose a Pattern Name</p>
+                  <p className="text-gray-400 text-sm">Use a descriptive name like <code className="text-green-400">btc_price_alert</code> or <code className="text-green-400">volume_spike_detection</code></p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
+                <div>
+                  <p className="text-white font-medium">Select an Action</p>
+                  <p className="text-gray-400 text-sm">Choose what happens when your pattern is detected: <code className="text-purple-400">create_signal</code>, <code className="text-purple-400">send_alert</code>, or <code className="text-purple-400">log_event</code></p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
+                <div>
+                  <p className="text-white font-medium">Define Custom Conditions</p>
+                  <p className="text-gray-400 text-sm">Specify the exact conditions that trigger your pattern using JSON format</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">4</div>
+                <div>
+                  <p className="text-white font-medium">Test Your Rule</p>
+                  <p className="text-gray-400 text-sm">Enable the rule and monitor the signals page to see when it triggers</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Pattern Examples */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-blue-400 mb-3">Custom Pattern Examples</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="font-semibold text-white mb-2">BTC Price Alert</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">btc_price_alert</code></p>
+                  <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">create_signal</code></p>
+                  <p><span className="text-gray-400">Conditions:</span></p>
+                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "symbol": "BTC/USDT",
+  "price_threshold": 50000,
+  "direction": "above"
+}`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="font-semibold text-white mb-2">Volume Spike Detection</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">volume_spike</code></p>
+                  <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">send_alert</code></p>
+                  <p><span className="text-gray-400">Conditions:</span></p>
+                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "volume_threshold": 5000000,
+  "timeframe": "5m",
+  "symbols": ["ETH/USDT", "BTC/USDT"]
+}`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="font-semibold text-white mb-2">Cross-Exchange Arbitrage</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">cross_exchange_arb</code></p>
+                  <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">create_signal</code></p>
+                  <p><span className="text-gray-400">Conditions:</span></p>
+                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "exchanges": ["binance", "coinbase"],
+  "spread_threshold": 0.5,
+  "symbol": "BTC/USDT"
+}`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="font-semibold text-white mb-2">Trend Reversal Alert</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">trend_reversal</code></p>
+                  <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">log_event</code></p>
+                  <p><span className="text-gray-400">Conditions:</span></p>
+                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "ma_short": 10,
+  "ma_long": 50,
+  "symbol": "EUR/USD",
+  "threshold": 0.1
+}`}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Customization */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-purple-400 mb-3">Advanced Customization</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-white font-medium mb-2">Custom Condition Variables</p>
+                <p className="text-gray-400 text-sm mb-2">You can use these variables in your conditions:</p>
+                <ul className="text-gray-400 text-sm space-y-1 ml-4">
+                  <li>• <code className="text-yellow-400">price</code> - Current price of the symbol</li>
+                  <li>• <code className="text-yellow-400">volume</code> - Trading volume</li>
+                  <li>• <code className="text-yellow-400">spread</code> - Price spread between exchanges</li>
+                  <li>• <code className="text-yellow-400">timestamp</code> - Event timestamp</li>
+                  <li>• <code className="text-yellow-400">symbol</code> - Trading pair symbol</li>
+                </ul>
+              </div>
+              
+              <div>
+                <p className="text-white font-medium mb-2">Condition Operators</p>
+                <p className="text-gray-400 text-sm mb-2">Supported comparison operators:</p>
+                <ul className="text-gray-400 text-sm space-y-1 ml-4">
+                  <li>• <code className="text-yellow-400">==</code> - Equal to</li>
+                  <li>• <code className="text-yellow-400">!=</code> - Not equal to</li>
+                  <li>• <code className="text-yellow-400">&gt;</code> - Greater than</li>
+                  <li>• <code className="text-yellow-400">&lt;</code> - Less than</li>
+                  <li>• <code className="text-yellow-400">&gt;=</code> - Greater than or equal</li>
+                  <li>• <code className="text-yellow-400">&lt;=</code> - Less than or equal</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Tips and Best Practices */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-yellow-400 mb-3">Tips & Best Practices</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-400">💡</span>
+                <p className="text-gray-400">Start with simple conditions and gradually add complexity</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-400">💡</span>
+                <p className="text-gray-400">Use descriptive pattern names that clearly indicate the purpose</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-400">💡</span>
+                <p className="text-gray-400">Test your rules with small thresholds first to avoid false positives</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-400">💡</span>
+                <p className="text-gray-400">Monitor the signals page to see which rules are triggering most often</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-400">💡</span>
+                <p className="text-gray-400">Use <code className="text-purple-400">log_event</code> action for testing before switching to <code className="text-purple-400">create_signal</code></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

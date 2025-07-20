@@ -501,7 +501,7 @@ const CEPRules = ({ isConnected }) => {
               <div className="flex items-start space-x-3">
                 <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">1</div>
                 <div>
-                  <p className="text-white font-medium">Choose a Pattern Name</p>
+                  <p className="text-white font-medium text-start">Choose a Pattern Name</p>
                   <p className="text-gray-400 text-sm">Use a descriptive name like <code className="text-green-400">btc_price_alert</code> or <code className="text-green-400">volume_spike_detection</code></p>
                 </div>
               </div>
@@ -509,7 +509,7 @@ const CEPRules = ({ isConnected }) => {
               <div className="flex items-start space-x-3">
                 <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
                 <div>
-                  <p className="text-white font-medium">Select an Action</p>
+                  <p className="text-white font-medium text-start">Select an Action</p>
                   <p className="text-gray-400 text-sm">Choose what happens when your pattern is detected: <code className="text-purple-400">create_signal</code>, <code className="text-purple-400">send_alert</code>, or <code className="text-purple-400">log_event</code></p>
                 </div>
               </div>
@@ -517,7 +517,7 @@ const CEPRules = ({ isConnected }) => {
               <div className="flex items-start space-x-3">
                 <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
                 <div>
-                  <p className="text-white font-medium">Define Custom Conditions</p>
+                  <p className="text-white font-medium text-start">Define Custom Conditions</p>
                   <p className="text-gray-400 text-sm">Specify the exact conditions that trigger your pattern using JSON format</p>
                 </div>
               </div>
@@ -525,7 +525,7 @@ const CEPRules = ({ isConnected }) => {
               <div className="flex items-start space-x-3">
                 <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">4</div>
                 <div>
-                  <p className="text-white font-medium">Test Your Rule</p>
+                  <p className="text-white font-medium text-start">Test Your Rule</p>
                   <p className="text-gray-400 text-sm">Enable the rule and monitor the signals page to see when it triggers</p>
                 </div>
               </div>
@@ -543,7 +543,7 @@ const CEPRules = ({ isConnected }) => {
                   <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">btc_price_alert</code></p>
                   <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">create_signal</code></p>
                   <p><span className="text-gray-400">Conditions:</span></p>
-                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-start text-xs overflow-x-auto">
 {`{
   "symbol": "BTC/USDT",
   "price_threshold": 50000,
@@ -561,9 +561,9 @@ const CEPRules = ({ isConnected }) => {
                   <p><span className="text-gray-400">Conditions:</span></p>
                   <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
 {`{
-  "volume_threshold": 5000000,
-  "timeframe": "5m",
-  "symbols": ["ETH/USDT", "BTC/USDT"]
+    "volume_threshold": 5000000,
+    "timeframe": "5m",
+    "symbols": ["ETH/USDT", "BTC/USDT"]
 }`}
                   </pre>
                 </div>
@@ -575,11 +575,11 @@ const CEPRules = ({ isConnected }) => {
                   <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">cross_exchange_arb</code></p>
                   <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">create_signal</code></p>
                   <p><span className="text-gray-400">Conditions:</span></p>
-                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+                  <pre className="text-yellow-400 bg-gray-900 text-start p-2 rounded text-xs overflow-x-auto">
 {`{
-  "exchanges": ["binance", "coinbase"],
-  "spread_threshold": 0.5,
-  "symbol": "BTC/USDT"
+    "exchanges": ["binance", "coinbase"],
+    "spread_threshold": 0.5,
+    "symbol": "BTC/USDT"
 }`}
                   </pre>
                 </div>
@@ -591,12 +591,12 @@ const CEPRules = ({ isConnected }) => {
                   <p><span className="text-gray-400">Pattern:</span> <code className="text-green-400">trend_reversal</code></p>
                   <p><span className="text-gray-400">Action:</span> <code className="text-purple-400">log_event</code></p>
                   <p><span className="text-gray-400">Conditions:</span></p>
-                  <pre className="text-yellow-400 bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+                  <pre className="text-yellow-400 bg-gray-900 text-start p-2 rounded text-xs overflow-x-auto">
 {`{
-  "ma_short": 10,
-  "ma_long": 50,
-  "symbol": "EUR/USD",
-  "threshold": 0.1
+    "ma_short": 10,
+    "ma_long": 50,
+    "symbol": "EUR/USD",
+    "threshold": 0.1
 }`}
                   </pre>
                 </div>
@@ -608,7 +608,7 @@ const CEPRules = ({ isConnected }) => {
           <div className="bg-gray-700 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-purple-400 mb-3">Advanced Customization</h3>
             <div className="space-y-3">
-              <div>
+              <div className='text-start'>
                 <p className="text-white font-medium mb-2">Custom Condition Variables</p>
                 <p className="text-gray-400 text-sm mb-2">You can use these variables in your conditions:</p>
                 <ul className="text-gray-400 text-sm space-y-1 ml-4">
@@ -620,7 +620,7 @@ const CEPRules = ({ isConnected }) => {
                 </ul>
               </div>
               
-              <div>
+              <div className='text-start'>
                 <p className="text-white font-medium mb-2">Condition Operators</p>
                 <p className="text-gray-400 text-sm mb-2">Supported comparison operators:</p>
                 <ul className="text-gray-400 text-sm space-y-1 ml-4">

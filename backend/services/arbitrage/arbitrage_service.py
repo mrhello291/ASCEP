@@ -207,7 +207,7 @@ def create_arbitrage_signal(opportunity):
         if len(arbitrage_signals) > 100:
             arbitrage_signals.pop(0)
         
-        # Store in Redis (optimized for speed)
+        # Store in Redis
         if redis_client:
             signal_key = f"signal:{signal['id']}"
             # Convert lists to JSON strings for Redis storage
@@ -217,36 +217,41 @@ def create_arbitrage_signal(opportunity):
             redis_client.hmset(signal_key, redis_signal)
             redis_client.expire(signal_key, 86400)  # 24 hours
             
-            # Publish to Redis channel immediately
+            # Publish to Redis channel
             redis_client.publish('arbitrage_signals', json.dumps(signal))
         
-        # Reduced logging for performance
-        logger.debug(f"🚨 Signal created: {signal['type']} - {signal['spread_percentage']:.2f}%")
+        logger.info(f"🚨 Arbitrage signal created: {signal['type']} - {signal['spread_percentage']:.2f}% spread")
         
     except Exception as e:
         logger.error(f"Error creating arbitrage signal: {e}")
 
 def arbitrage_detection_thread():
-    """Background thread for continuous arbitrage detection - DEPRECATED"""
-    # This thread is no longer needed since we use Redis price listener
-    # which provides real-time detection on every price update
-    pass
+    """Background thread for continuous arbitrage detection"""
+    while True:
+        try:
+            detect_arbitrage_opportunities()
+            time.sleep(10)  # Check every 10 seconds
+        except Exception as e:
+            logger.error(f"Arbitrage detection thread error: {e}")
+            time.sleep(30)  # Wait longer on error
 
 def redis_price_listener():
-    """Listen for price updates from Redis - REAL-TIME DETECTION"""
+    """Listen for price updates from Redis"""
     if not redis_client:
         return
     
     pubsub = redis_client.pubsub()
     pubsub.subscribe('price_updates')
     
-    logger.info("👂 Listening for price updates (real-time arbitrage detection)...")
+    logger.info("👂 Listening for price updates...")
     
     for message in pubsub.listen():
         if message['type'] == 'message':
             try:
                 price_data = json.loads(message['data'])
-                # Trigger arbitrage detection on every price update
+                logger.info(f"📊 Received price update: {price_data['symbol']}")
+                
+                # Trigger arbitrage detection
                 detect_arbitrage_opportunities()
                 
             except Exception as e:
@@ -378,9 +383,12 @@ def service_info():
 if __name__ == '__main__':
     logger.info("🚀 Starting ASCEP Arbitrage Service...")
     
-    # Only start Redis price listener for real-time detection
+    # Start background threads
+    detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
+    detection_thread.start()
+    
     redis_thread = threading.Thread(target=redis_price_listener, daemon=True)
     redis_thread.start()
     
-    logger.info("✅ Arbitrage service started with real-time detection!")
+    logger.info("✅ Arbitrage service started!")
     app.run(host='0.0.0.0', port=5003, debug=False) 

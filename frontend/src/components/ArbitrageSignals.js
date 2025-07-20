@@ -202,65 +202,34 @@ const ArbitrageSignals = ({ signals, isConnected }) => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <h3 className="text-lg font-semibold text-white">
-                        {signal.type === 'cep_signal' 
-                          ? `${signal.rule_name || 'CEP Signal'}`
-                          : signal.symbols?.join(' vs ') || 'Arbitrage Opportunity'
-                        }
+                        {signal.symbols?.join(' vs ') || 'Arbitrage Opportunity'}
                       </h3>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(signal.severity)}`}>
                         {signal.severity || 'medium'}
                       </span>
-                      {signal.type === 'cep_signal' && (
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500 text-white">
-                          CEP
-                        </span>
-                      )}
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {signal.type === 'cep_signal' ? (
-                        <>
-                          <div>
-                            <p className="text-gray-400 text-sm">Pattern</p>
-                            <p className="text-lg font-semibold text-white">
-                              {signal.pattern || 'Unknown'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-sm">Rule ID</p>
-                            <p className="text-lg font-semibold text-white">
-                              #{signal.rule_id || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-sm">Symbol</p>
-                            <p className="text-lg font-semibold text-white">
-                              {signal.symbols?.[0] || 'Unknown'}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <p className="text-gray-400 text-sm">Spread</p>
-                            <p className="text-lg font-semibold text-white">
-                              {formatSpread(signal.spread)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-sm">Spread %</p>
-                            <p className="text-lg font-semibold text-white">
-                              {signal.spread_percentage ? `${signal.spread_percentage.toFixed(2)}%` : 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-sm">Type</p>
-                            <p className="text-lg font-semibold text-white">
-                              {signal.type || 'arbitrage'}
-                            </p>
-                          </div>
-                        </>
-                      )}
+                      <div>
+                        <p className="text-gray-400 text-sm">Spread</p>
+                        <p className="text-lg font-semibold text-white">
+                          {formatSpread(signal.spread)}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-gray-400 text-sm">Spread %</p>
+                        <p className="text-lg font-semibold text-white">
+                          {signal.spread_percentage ? `${signal.spread_percentage.toFixed(2)}%` : 'N/A'}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-gray-400 text-sm">Type</p>
+                        <p className="text-lg font-semibold text-white">
+                          {signal.type || 'arbitrage'}
+                        </p>
+                      </div>
                     </div>
 
                     {/* CEP Rule Information */}

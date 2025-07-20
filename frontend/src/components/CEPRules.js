@@ -687,7 +687,7 @@ const CEPRules = ({ isConnected }) => {
     "symbol": "EUR/USD",
     "threshold": 0.1
 }`}
-                  </pre>
+            </pre>
                 </div>
               </div>
             </div>

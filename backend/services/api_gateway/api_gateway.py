@@ -79,16 +79,17 @@ def redis_price_update_listener():
 
     while True:
         try:
-            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
+            message = pubsub.get_message(timeout=1)
             if message and message['type'] == 'message':
                 try:
                     data = json.loads(message['data'])
                     # emit to all connected WebSocket clients
                     socketio.emit('price_update', data)
-                    # Reduced logging for performance
+                    logger.info(f"Emitted price update: {data['symbol']}")
                 except Exception as e:
                     logger.error(f"Error emitting price update: {e}")
-            # No sleep - run as fast as possible for real-time performance
+            # yield to eventlet
+            socketio.sleep(0.1)
         except Exception as e:
             logger.error(f"Redis listener error: {e}")
             # Try to reconnect
@@ -99,7 +100,7 @@ def redis_price_update_listener():
                 logger.info("Reconnected to Redis pub/sub")
             except Exception as reconnect_error:
                 logger.error(f"Failed to reconnect to Redis: {reconnect_error}")
-                socketio.sleep(0.1)  # Minimal sleep on error to prevent infinite loops
+                socketio.sleep(5)  # Wait before retrying
 
 def redis_arbitrage_signals_listener():
     if not redis_client:
@@ -112,16 +113,17 @@ def redis_arbitrage_signals_listener():
 
     while True:
         try:
-            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
+            message = pubsub.get_message(timeout=1)
             if message and message['type'] == 'message':
                 try:
                     signal = json.loads(message['data'])
                     # emit to all connected WebSocket clients
                     socketio.emit('arbitrage_signal', signal)
-                    # Reduced logging for performance
+                    logger.info(f"Emitted arbitrage signal: {signal.get('type', 'unknown')} - {signal.get('spread_percentage', 0):.2f}%")
                 except Exception as e:
                     logger.error(f"Error emitting arbitrage signal: {e}")
-            # No sleep - run as fast as possible for real-time performance
+            # yield to eventlet
+            socketio.sleep(0.1)
         except Exception as e:
             logger.error(f"Arbitrage signals Redis listener error: {e}")
             # Try to reconnect
@@ -132,56 +134,7 @@ def redis_arbitrage_signals_listener():
                 logger.info("Reconnected to arbitrage signals Redis pub/sub")
             except Exception as reconnect_error:
                 logger.error(f"Failed to reconnect to arbitrage signals Redis: {reconnect_error}")
-                socketio.sleep(0.1)  # Minimal sleep on error to prevent infinite loops
-
-def redis_cep_signals_listener():
-    if not redis_client:
-        logger.warning("Redis not initialized; no CEP signal updates.")
-        return
-
-    pubsub = redis_client.pubsub()
-    pubsub.subscribe('cep_signals')
-    logger.info("🔔 Subscribed to cep_signals channel")
-
-    while True:
-        try:
-            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
-            if message and message['type'] == 'message':
-                try:
-                    cep_signal = json.loads(message['data'])
-                    
-                    # Convert CEP signal to arbitrage signal format for frontend compatibility
-                    arbitrage_signal = {
-                        'id': f"cep_{cep_signal.get('rule_id', 'unknown')}_{int(time.time())}",
-                        'type': 'cep_signal',
-                        'rule_id': cep_signal.get('rule_id'),
-                        'rule_name': cep_signal.get('rule_name'),
-                        'pattern': cep_signal.get('pattern'),
-                        'symbols': [cep_signal.get('event_data', {}).get('symbol', 'Unknown')],
-                        'spread': 0,  # CEP signals don't have spread
-                        'spread_percentage': 0,
-                        'severity': cep_signal.get('severity', 'medium'),
-                        'timestamp': cep_signal.get('timestamp'),
-                        'event_data': cep_signal.get('event_data', {})
-                    }
-                    
-                    # emit to all connected WebSocket clients
-                    socketio.emit('arbitrage_signal', arbitrage_signal)
-                    # Reduced logging for performance
-                except Exception as e:
-                    logger.error(f"Error emitting CEP signal: {e}")
-            # No sleep - run as fast as possible for real-time performance
-        except Exception as e:
-            logger.error(f"CEP signals Redis listener error: {e}")
-            # Try to reconnect
-            try:
-                pubsub.close()
-                pubsub = redis_client.pubsub()
-                pubsub.subscribe('cep_signals')
-                logger.info("Reconnected to CEP signals Redis pub/sub")
-            except Exception as reconnect_error:
-                logger.error(f"Failed to reconnect to CEP signals Redis: {reconnect_error}")
-                socketio.sleep(0.1)  # Minimal sleep on error to prevent infinite loops
+                socketio.sleep(5)  # Wait before retrying
 
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)
@@ -191,7 +144,6 @@ def start_background_tasks():
     """Start background tasks for Redis monitoring"""
     socketio.start_background_task(redis_price_update_listener)
     socketio.start_background_task(redis_arbitrage_signals_listener)
-    socketio.start_background_task(redis_cep_signals_listener)
 
 def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
     """Route request to appropriate service with latency monitoring"""

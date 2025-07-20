@@ -79,13 +79,13 @@ def redis_price_update_listener():
 
     while True:
         try:
-            message = pubsub.get_message(timeout=1)
+            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
             if message and message['type'] == 'message':
                 try:
                     data = json.loads(message['data'])
                     # emit to all connected WebSocket clients
                     socketio.emit('price_update', data)
-                    logger.info(f"Emitted price update: {data['symbol']}")
+                    # Reduced logging for performance
                 except Exception as e:
                     logger.error(f"Error emitting price update: {e}")
             # No sleep - run as fast as possible for real-time performance
@@ -112,13 +112,13 @@ def redis_arbitrage_signals_listener():
 
     while True:
         try:
-            message = pubsub.get_message(timeout=1)
+            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
             if message and message['type'] == 'message':
                 try:
                     signal = json.loads(message['data'])
                     # emit to all connected WebSocket clients
                     socketio.emit('arbitrage_signal', signal)
-                    logger.info(f"Emitted arbitrage signal: {signal.get('type', 'unknown')} - {signal.get('spread_percentage', 0):.2f}%")
+                    # Reduced logging for performance
                 except Exception as e:
                     logger.error(f"Error emitting arbitrage signal: {e}")
             # No sleep - run as fast as possible for real-time performance
@@ -145,7 +145,7 @@ def redis_cep_signals_listener():
 
     while True:
         try:
-            message = pubsub.get_message(timeout=1)
+            message = pubsub.get_message(timeout=0)  # No timeout for real-time performance
             if message and message['type'] == 'message':
                 try:
                     cep_signal = json.loads(message['data'])
@@ -167,7 +167,7 @@ def redis_cep_signals_listener():
                     
                     # emit to all connected WebSocket clients
                     socketio.emit('arbitrage_signal', arbitrage_signal)
-                    logger.info(f"Emitted CEP signal: {cep_signal.get('rule_name', 'unknown')} - Pattern: {cep_signal.get('pattern', 'unknown')}")
+                    # Reduced logging for performance
                 except Exception as e:
                     logger.error(f"Error emitting CEP signal: {e}")
             # No sleep - run as fast as possible for real-time performance

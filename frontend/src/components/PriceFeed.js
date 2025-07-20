@@ -219,22 +219,13 @@ const PriceFeed = ({ priceData, isConnected }) => {
       {/* Feed Sources */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Data Sources</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-700 rounded-lg p-4">
-            <h3 className="font-semibold text-white mb-2">Mock Feed</h3>
-            <p className="text-gray-400 text-sm">Simulated price data for testing</p>
-            <div className="mt-2">
-              <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-              <span className="text-green-400 text-sm">Active</span>
-            </div>
-          </div>
-          
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">          
           <div className="bg-gray-700 rounded-lg p-4">
             <h3 className="font-semibold text-white mb-2">Binance WebSocket</h3>
             <p className="text-gray-400 text-sm">Real-time crypto price feeds</p>
             <div className="mt-2">
-              <span className="inline-block w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
-              <span className="text-gray-400 text-sm">Configured</span>
+              <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+              <span className="text-green-400 text-sm">Active</span>
             </div>
           </div>
           

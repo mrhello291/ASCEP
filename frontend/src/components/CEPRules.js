@@ -16,6 +16,7 @@ const CEPRules = ({ isConnected }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showConditions, setShowConditions] = useState(false);
   const [conditionsText, setConditionsText] = useState('{}');
 
@@ -60,19 +61,31 @@ const CEPRules = ({ isConnected }) => {
     };
 
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(`${API_URL}/api/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ruleToCreate)
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      if (data.rule) setRules(rules => [...rules, data.rule]);
-      setNewRule({ name: '', pattern: '', action: '', conditions: {}, enabled: true });
-      setConditionsText('{}');
-      setShowConditions(false);
+      if (data.rule) {
+        setRules(rules => [...rules, data.rule]);
+        setNewRule({ name: '', pattern: '', action: '', conditions: {}, enabled: true });
+        setConditionsText('{}');
+        setShowConditions(false);
+        setSuccess(`✅ Rule "${data.rule.name}" added successfully`);
+        console.log(`✅ Rule "${data.rule.name}" added successfully`);
+      }
     } catch (err) {
-      setError('Failed to add rule');
+      console.error('Add rule error:', err);
+      setError(`Failed to add rule: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -81,16 +94,28 @@ const CEPRules = ({ isConnected }) => {
   // Enable/disable rule
   const handleToggleRule = async (rule) => {
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(`${API_URL}/api/rules/${rule.rule_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !rule.enabled })
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      if (data.rule) setRules(rules => rules.map(r => r.rule_id === rule.rule_id ? data.rule : r));
+      if (data.rule) {
+        setRules(rules => rules.map(r => r.rule_id === rule.rule_id ? data.rule : r));
+        setSuccess(`✅ Rule ${rule.name} ${!rule.enabled ? 'enabled' : 'disabled'} successfully`);
+        console.log(`✅ Rule ${rule.name} ${!rule.enabled ? 'enabled' : 'disabled'} successfully`);
+      }
     } catch (err) {
-      setError('Failed to update rule');
+      console.error('Toggle rule error:', err);
+      setError(`Failed to ${!rule.enabled ? 'enable' : 'disable'} rule: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -98,13 +123,29 @@ const CEPRules = ({ isConnected }) => {
 
   // Delete rule
   const handleDeleteRule = async (rule) => {
+    if (!window.confirm(`Are you sure you want to delete rule "${rule.name}"?`)) {
+      return;
+    }
+    
     setLoading(true);
+    setError('');
     try {
-      await fetch(`${API_URL}/api/rules/${rule.rule_id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/rules/${rule.rule_id}`, { 
+        method: 'DELETE' 
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       setRules(rules => rules.filter(r => r.rule_id !== rule.rule_id));
       if (selectedRule?.rule_id === rule.rule_id) setSelectedRule(null);
+      setSuccess(`✅ Rule "${rule.name}" deleted successfully`);
+      console.log(`✅ Rule "${rule.name}" deleted successfully`);
     } catch (err) {
-      setError('Failed to delete rule');
+      console.error('Delete rule error:', err);
+      setError(`Failed to delete rule: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -114,16 +155,28 @@ const CEPRules = ({ isConnected }) => {
   const handleSaveChanges = async () => {
     if (!selectedRule) return;
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(`${API_URL}/api/rules/${selectedRule.rule_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedRule)
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      if (data.rule) setRules(rules => rules.map(r => r.rule_id === data.rule.rule_id ? data.rule : r));
+      if (data.rule) {
+        setRules(rules => rules.map(r => r.rule_id === data.rule.rule_id ? data.rule : r));
+        setSuccess(`✅ Rule "${selectedRule.name}" updated successfully`);
+        console.log(`✅ Rule "${selectedRule.name}" updated successfully`);
+      }
     } catch (err) {
-      setError('Failed to save changes');
+      console.error('Save changes error:', err);
+      setError(`Failed to save changes: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -146,8 +199,44 @@ const CEPRules = ({ isConnected }) => {
         </p>
       </div>
 
-      {error && <div className="bg-red-800 text-red-200 p-2 rounded">{error}</div>}
-      {loading && <div className="text-gray-400">Loading...</div>}
+      {error && (
+        <div className="bg-red-800 text-red-200 p-4 rounded-lg flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
+          <button 
+            onClick={() => setError('')}
+            className="text-red-300 hover:text-red-100 ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-800 text-green-200 p-4 rounded-lg flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Success</p>
+            <p className="text-sm">{success}</p>
+          </div>
+          <button 
+            onClick={() => setSuccess('')}
+            className="text-green-300 hover:text-green-100 ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      
+      {loading && (
+        <div className="bg-blue-800 text-blue-200 p-4 rounded-lg">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-200 mr-2"></div>
+            <span>Processing...</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Rules List */}

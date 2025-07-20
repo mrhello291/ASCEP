@@ -136,6 +136,56 @@ def redis_arbitrage_signals_listener():
                 logger.error(f"Failed to reconnect to arbitrage signals Redis: {reconnect_error}")
                 socketio.sleep(5)  # Wait before retrying
 
+def redis_cep_signals_listener():
+    if not redis_client:
+        logger.warning("Redis not initialized; no CEP signal updates.")
+        return
+
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('cep_signals')
+    logger.info("🔔 Subscribed to cep_signals channel")
+
+    while True:
+        try:
+            message = pubsub.get_message(timeout=1)
+            if message and message['type'] == 'message':
+                try:
+                    cep_signal = json.loads(message['data'])
+                    
+                    # Convert CEP signal to arbitrage signal format for frontend compatibility
+                    arbitrage_signal = {
+                        'id': f"cep_{cep_signal.get('rule_id', 'unknown')}_{int(time.time())}",
+                        'type': 'cep_signal',
+                        'rule_id': cep_signal.get('rule_id'),
+                        'rule_name': cep_signal.get('rule_name'),
+                        'pattern': cep_signal.get('pattern'),
+                        'symbols': [cep_signal.get('event_data', {}).get('symbol', 'Unknown')],
+                        'spread': 0,  # CEP signals don't have spread
+                        'spread_percentage': 0,
+                        'severity': cep_signal.get('severity', 'medium'),
+                        'timestamp': cep_signal.get('timestamp'),
+                        'event_data': cep_signal.get('event_data', {})
+                    }
+                    
+                    # emit to all connected WebSocket clients
+                    socketio.emit('arbitrage_signal', arbitrage_signal)
+                    logger.info(f"Emitted CEP signal: {cep_signal.get('rule_name', 'unknown')} - Pattern: {cep_signal.get('pattern', 'unknown')}")
+                except Exception as e:
+                    logger.error(f"Error emitting CEP signal: {e}")
+            # yield to eventlet
+            socketio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"CEP signals Redis listener error: {e}")
+            # Try to reconnect
+            try:
+                pubsub.close()
+                pubsub = redis_client.pubsub()
+                pubsub.subscribe('cep_signals')
+                logger.info("Reconnected to CEP signals Redis pub/sub")
+            except Exception as reconnect_error:
+                logger.error(f"Failed to reconnect to CEP signals Redis: {reconnect_error}")
+                socketio.sleep(5)  # Wait before retrying
+
 # Initialize latency monitor
 latency_monitor = LatencyMonitor(redis_client)
 
@@ -144,6 +194,7 @@ def start_background_tasks():
     """Start background tasks for Redis monitoring"""
     socketio.start_background_task(redis_price_update_listener)
     socketio.start_background_task(redis_arbitrage_signals_listener)
+    socketio.start_background_task(redis_cep_signals_listener)
 
 def route_request(service_name: str, endpoint: str = None, method: str = "GET"):
     """Route request to appropriate service with latency monitoring"""
@@ -251,6 +302,21 @@ def rules_routing():
         return route_request("cep_engine", "/rules", "GET")
     else:
         return route_request("cep_engine", "/rules", "POST")
+
+@app.route('/api/rules/<int:rule_id>', methods=['GET', 'PUT', 'DELETE'])
+def rule_routing(rule_id):
+    """Route individual CEP rule requests to CEP engine service"""
+    if request.method == "GET":
+        return route_request("cep_engine", f"/rules/{rule_id}", "GET")
+    elif request.method == "PUT":
+        return route_request("cep_engine", f"/rules/{rule_id}", "PUT")
+    else:
+        return route_request("cep_engine", f"/rules/{rule_id}", "DELETE")
+
+@app.route('/api/rules/<int:rule_id>/test', methods=['POST'])
+def rule_test_routing(rule_id):
+    """Route CEP rule test requests to CEP engine service"""
+    return route_request("cep_engine", f"/rules/{rule_id}/test", "POST")
 
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def task_routing():

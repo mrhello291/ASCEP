@@ -111,6 +111,30 @@ except Exception as e:
     logger.warning(f"⚠️ Redis connection failed: {e}")
     redis_client = None
 
+def listen_for_price_subscriptions():
+    if not redis_client:
+        logger.warning("❌ Redis not initialized; cannot listen for price subscriptions.")
+        return
+
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('price_subscriptions')
+    logger.info("📡 Subscribed to 'price_subscriptions' channel")
+
+    while True:
+        try:
+            message = pubsub.get_message(timeout=1)
+            if message and message['type'] == 'message':
+                try:
+                    data = json.loads(message['data'])
+                    logger.info(f"📩 Received price subscription: {data}")
+                    # Optionally: use 'data' to select symbols or manage per-client interests
+                except Exception as e:
+                    logger.error(f"❌ Failed to handle price subscription: {e}")
+            time.sleep(0.5)
+        except Exception as e:
+            logger.error(f"❌ Redis pubsub error in price subscriptions: {e}")
+            time.sleep(5)
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -251,7 +275,11 @@ def main():
     flask_thread = threading.Thread(target=run_flask_app, daemon=True)
     flask_thread.start()
     logger.info("🌐 Flask app started on port 5002")
-    
+
+    # Start Redis pub/sub listener for price subscriptions
+    threading.Thread(target=listen_for_price_subscriptions, daemon=True).start()
+    logger.info("📡 Listening for price subscriptions")
+
     logger.info("📱 Press Ctrl+C to stop")
     
     # Keep the service running

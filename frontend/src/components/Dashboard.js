@@ -130,6 +130,12 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
 
   return (
     <div className="space-y-6">
+      {/* Info Alert */}
+      <div className="bg-blue-900 border-l-4 border-blue-400 p-4 mb-4 rounded">
+        <p className="text-blue-200 font-semibold">
+          Note: Only Binance crypto data is live (via WebSocket). The forex data is simulated mock data for demonstration purposes only and should not be taken seriously. Currently, arbitrage detection is not performed on live Binance data.
+        </p>
+      </div>
       {/* Arbitrage Config Sliders */}
       <div className="bg-gray-800 rounded-lg p-6 mb-4">
         <h2 className="text-xl font-semibold text-white mb-2">Arbitrage Config</h2>

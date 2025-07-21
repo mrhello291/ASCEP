@@ -12,6 +12,7 @@ service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
 from backend.services.price_feeds.price_feed_service import main
+# from price_feed_service import main
 
 if __name__ == '__main__':
     main() 

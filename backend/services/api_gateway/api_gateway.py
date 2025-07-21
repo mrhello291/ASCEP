@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 
 from backend.services.api_gateway.service_registry import service_registry
 from backend.services.api_gateway.latency_monitor import LatencyMonitor
+# from service_registry import service_registry
+# from latency_monitor import LatencyMonitor
 
 # Load environment variable
 load_dotenv()

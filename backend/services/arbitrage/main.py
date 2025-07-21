@@ -23,15 +23,16 @@ logger = logging.getLogger(__name__)
 service_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, service_dir)
 
-from backend.services.arbitrage.arbitrage_service import app, arbitrage_detection_thread, redis_price_listener
+from backend.services.arbitrage.arbitrage_service import app, redis_price_listener
+# from arbitrage_service import app, redis_price_listener
 
 def start_background_threads():
     """Start background threads for arbitrage detection and Redis listening"""
     
     # Start background threads
-    detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
-    detection_thread.start()
-    logger.info("✅ Arbitrage detection thread started")
+    # detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
+    # detection_thread.start()
+    # logger.info("✅ Arbitrage detection thread started")
     
     redis_thread = threading.Thread(target=redis_price_listener, daemon=True)
     redis_thread.start()

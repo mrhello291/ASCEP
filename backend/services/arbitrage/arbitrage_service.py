@@ -288,20 +288,14 @@ def redis_price_listener():
     
     logger.info("👂 Listening for price updates...")
     
-    last_detection_time = 0
-    DETECTION_DEBOUNCE_SECONDS = 0.5
-    
     for message in pubsub.listen():
         if message['type'] == 'message':
-            now = time.time()
-            if now - last_detection_time > DETECTION_DEBOUNCE_SECONDS:
-                try:
-                    price_data = json.loads(message['data'])
-                    logger.info(f"📊 Received price update: {price_data['symbol']}")
-                    detect_arbitrage_opportunities()
-                except Exception as e:
-                    logger.error(f"Error processing price update: {e}")
-                last_detection_time = now
+            try:
+                price_data = json.loads(message['data'])
+                logger.info(f"📊 Received price update: {price_data['symbol']}")
+                detect_arbitrage_opportunities()
+            except Exception as e:
+                logger.error(f"Error processing price update: {e}")
 
 @app.route('/health', methods=['GET'])
 def health_check():

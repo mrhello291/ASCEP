@@ -16,9 +16,18 @@ const CurrencyConverter = ({ priceData, isConnected }) => {
   const [selectedPair, setSelectedPair] = useState('USD/EUR');
   const [timeframe, setTimeframe] = useState('1h');
 
+  // Debug logging
+  console.log('CurrencyConverter - priceData:', priceData);
+  console.log('CurrencyConverter - isConnected:', isConnected);
+
   // Get all available currencies and cryptos
   const getAllCurrencies = () => {
     const currencies = [];
+    if (!priceData || typeof priceData !== 'object') {
+      console.warn('CurrencyConverter: priceData is not available or invalid');
+      return currencies;
+    }
+    
     Object.keys(priceData).forEach(symbol => {
       if (symbol.includes('/')) {
         // Forex pairs
@@ -203,7 +212,47 @@ const CurrencyConverter = ({ priceData, isConnected }) => {
     return 0;
   };
 
-  const arbitrageOpportunities = calculateArbitrage();
+  const arbitrageOpportunities = calculateArbitrage(currencies, getRate, { threshold: 0.1, topN: 5 });
+
+  // Add error handling for arbitrage calculation
+  let safeArbitrageOpportunities = [];
+  try {
+    safeArbitrageOpportunities = calculateArbitrage(currencies, getRate, { threshold: 0.1, topN: 5 });
+  } catch (error) {
+    console.error('Error calculating arbitrage opportunities:', error);
+    safeArbitrageOpportunities = [];
+  }
+
+  // Show loading state if not connected or no price data
+  if (!isConnected) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Real-Time Currency Converter
+          </h1>
+          <p className="text-gray-400">
+            Connecting to market data...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!priceData || Object.keys(priceData).length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Real-Time Currency Converter
+          </h1>
+          <p className="text-gray-400">
+            Waiting for price data...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -371,9 +420,9 @@ const CurrencyConverter = ({ priceData, isConnected }) => {
               <Target className="mr-2" size={18} />
               Arbitrage Opportunities
             </h3>
-            {arbitrageOpportunities.length > 0 ? (
+            {safeArbitrageOpportunities.length > 0 ? (
               <div className="space-y-2">
-                {arbitrageOpportunities.map((opp, index) => (
+                {safeArbitrageOpportunities.map((opp, index) => (
                   <div key={index} className="bg-gray-700 rounded p-3">
                     <div className="flex justify-between items-center">
                       <div>

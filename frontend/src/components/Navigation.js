@@ -11,7 +11,7 @@ const Navigation = ({ isConnected, systemStatus }) => {
     { path: '/visualizations', label: 'Charts', icon: BarChart3 },
     { path: '/converter', label: 'Converter', icon: Calculator },
     { path: '/comparison', label: 'Analysis', icon: Globe },
-    { path: '/hft', label: 'HFT Dashboard', icon: Zap },
+    // { path: '/hft', label: 'HFT Dashboard', icon: Zap },
     { path: '/signals', label: 'Signals', icon: TrendingUp },
     { path: '/rules', label: 'CEP Rules', icon: Settings },
   ];

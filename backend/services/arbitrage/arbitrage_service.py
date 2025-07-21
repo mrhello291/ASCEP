@@ -114,19 +114,33 @@ demo_signals = [
 arbitrage_signals.extend(demo_signals)
 signal_id_counter = len(demo_signals) + 1
 
+# In-memory price cache for HFT-style detection
+latest_prices = {}
+
+def redis_price_listener():
+    """Listen for price updates from Redis and update in-memory cache"""
+    if not redis_client:
+        return
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('price_updates')
+    logger.info("👂 Listening for price updates...")
+    for message in pubsub.listen():
+        if message['type'] == 'message':
+            try:
+                data = json.loads(message['data'])
+                symbol = data['symbol']
+                price = data['price']
+                timestamp = data.get('timestamp')
+                latest_prices[symbol] = (price, timestamp)
+                detect_arbitrage_opportunities()
+            except Exception as e:
+                logger.error(f"Error processing price update: {e}")
+
+
 def detect_arbitrage_opportunities():
-    """Detect arbitrage opportunities from price data"""
+    """Detect arbitrage opportunities from in-memory price cache (no Redis scan)"""
     try:
-        if not redis_client:
-            return
-        
-        # Get all price data from Redis using non-blocking scan
-        prices = {}
-        for key in redis_client.scan_iter(match='price:*'):
-            symbol = key.replace('price:', '')
-            price_data = redis_client.hgetall(key)
-            if price_data:
-                prices[symbol] = float(price_data.get('price', 0))
+        prices = {sym: p for sym, (p, _) in latest_prices.items()}
         
         # Simple arbitrage detection logic
         opportunities = []
@@ -277,25 +291,6 @@ def create_arbitrage_signal(opportunity):
 #         except Exception as e:
 #             logger.error(f"Arbitrage detection thread error: {e}")
 #             time.sleep(30)  # Wait longer on error
-
-def redis_price_listener():
-    """Listen for price updates from Redis"""
-    if not redis_client:
-        return
-    
-    pubsub = redis_client.pubsub()
-    pubsub.subscribe('price_updates')
-    
-    logger.info("👂 Listening for price updates...")
-    
-    for message in pubsub.listen():
-        if message['type'] == 'message':
-            try:
-                price_data = json.loads(message['data'])
-                logger.info(f"📊 Received price update: {price_data['symbol']}")
-                detect_arbitrage_opportunities()
-            except Exception as e:
-                logger.error(f"Error processing price update: {e}")
 
 @app.route('/health', methods=['GET'])
 def health_check():

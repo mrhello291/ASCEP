@@ -53,7 +53,7 @@ def send_price_to_backend(symbol, price, timestamp):
         # Store in Redis
         if redis_client:
             price_key = f"price:{symbol}"
-            redis_client.hset(price_key, {
+            redis_client.hset(price_key, mapping={
                 'price': price,
                 'timestamp': timestamp
             })

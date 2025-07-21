@@ -63,6 +63,19 @@ except Exception as e:
 arbitrage_signals = []
 signal_id_counter = 1
 
+# Configuration constants
+ARBITRAGE_CONFIG = {
+    'cross_currency_threshold': 0.1,  # 0.1% minimum spread for cross-currency
+    'triangular_threshold': 0.2,      # 0.2% minimum spread for triangular
+    'max_signals_per_cycle': 5,       # Maximum signals to emit per detection cycle
+    'signal_memory_limit': 100,       # Maximum signals to keep in memory
+    'severity_thresholds': {
+        'high': 0.5,    # >0.5% = high severity
+        'medium': 0.2,  # >0.2% = medium severity
+        'low': 0.0      # >0.0% = low severity
+    }
+}
+
 # Demo signals for testing
 demo_signals = [
     {
@@ -107,11 +120,9 @@ def detect_arbitrage_opportunities():
         if not redis_client:
             return
         
-        # Get all price data from Redis
-        price_keys = redis_client.keys('price:*')
+        # Get all price data from Redis using non-blocking scan
         prices = {}
-        
-        for key in price_keys:
+        for key in redis_client.scan_iter(match='price:*'):
             symbol = key.replace('price:', '')
             price_data = redis_client.hgetall(key)
             if price_data:
@@ -119,12 +130,20 @@ def detect_arbitrage_opportunities():
         
         # Simple arbitrage detection logic
         opportunities = []
+        seen_cross = set()  # Deduplicate cross-currency pairs
+        seen_triangular = set()  # Deduplicate triangular cycles
         
         # Check for cross-currency arbitrage (e.g., EUR/USD vs USD/EUR)
         for symbol, price in prices.items():
             if '/' in symbol:
                 base, quote = symbol.split('/')
                 reverse_symbol = f"{quote}/{base}"
+                
+                # Create canonical key to avoid duplicates
+                canonical_pair = tuple(sorted([symbol, reverse_symbol]))
+                if canonical_pair in seen_cross:
+                    continue
+                seen_cross.add(canonical_pair)
                 
                 if reverse_symbol in prices:
                     reverse_price = prices[reverse_symbol]
@@ -134,8 +153,8 @@ def detect_arbitrage_opportunities():
                         spread = abs(price - theoretical_price)
                         spread_percentage = (spread / price) * 100
                         
-                        # If spread is significant (>0.1%), create signal
-                        if spread_percentage > 0.1:
+                        # If spread is significant (>0.1%), add to opportunities
+                        if spread_percentage > ARBITRAGE_CONFIG['cross_currency_threshold']:
                             opportunities.append({
                                 'symbols': [symbol, reverse_symbol],
                                 'prices': [price, reverse_price],
@@ -145,7 +164,6 @@ def detect_arbitrage_opportunities():
                             })
         
         # Check for triangular arbitrage (e.g., EUR/USD, USD/JPY, EUR/JPY)
-        # This is a simplified version - real implementation would be more complex
         for symbol1, price1 in prices.items():
             if '/' in symbol1:
                 base1, quote1 = symbol1.split('/')
@@ -159,6 +177,12 @@ def detect_arbitrage_opportunities():
                             # Check if we have the third pair
                             third_symbol = f"{base1}/{quote2}"
                             if third_symbol in prices:
+                                # Create canonical key for triangular cycle
+                                cycle_symbols = tuple(sorted([symbol1, symbol2, third_symbol]))
+                                if cycle_symbols in seen_triangular:
+                                    continue
+                                seen_triangular.add(cycle_symbols)
+                                
                                 third_price = prices[third_symbol]
                                 
                                 # Calculate theoretical price through cross
@@ -166,7 +190,7 @@ def detect_arbitrage_opportunities():
                                 spread = abs(third_price - theoretical_price)
                                 spread_percentage = (spread / third_price) * 100
                                 
-                                if spread_percentage > 0.2:  # Higher threshold for triangular
+                                if spread_percentage > ARBITRAGE_CONFIG['triangular_threshold']:  # Higher threshold for triangular
                                     opportunities.append({
                                         'symbols': [symbol1, symbol2, third_symbol],
                                         'prices': [price1, price2, third_price],
@@ -175,10 +199,17 @@ def detect_arbitrage_opportunities():
                                         'type': 'triangular'
                                     })
         
-        # Create signals for opportunities
-        for opp in opportunities:
-            create_arbitrage_signal(opp)
-    
+        # Sort by spread percentage (highest first) and take top N
+        if opportunities:
+            opportunities.sort(key=lambda x: x['spread_percentage'], reverse=True)
+            top_opportunities = opportunities[:ARBITRAGE_CONFIG['max_signals_per_cycle']]  # Limit to top N most profitable
+            
+            # Create signals for top opportunities
+            for opp in top_opportunities:
+                create_arbitrage_signal(opp)
+                
+            logger.info(f"📊 Found {len(opportunities)} opportunities, emitted top {len(top_opportunities)} signals")
+        
     except Exception as e:
         logger.error(f"Error detecting arbitrage opportunities: {e}")
 
@@ -187,6 +218,17 @@ def create_arbitrage_signal(opportunity):
     global signal_id_counter
     
     try:
+        # Improved severity calculation with better thresholds
+        spread_pct = opportunity['spread_percentage']
+        thresholds = ARBITRAGE_CONFIG['severity_thresholds']
+        
+        if spread_pct > thresholds['high']:
+            severity = 'high'
+        elif spread_pct > thresholds['medium']:
+            severity = 'medium'
+        else:
+            severity = 'low'
+        
         signal = {
             'id': signal_id_counter,
             'symbols': opportunity['symbols'],
@@ -195,7 +237,7 @@ def create_arbitrage_signal(opportunity):
             'spread_percentage': opportunity['spread_percentage'],
             'type': opportunity['type'],
             'timestamp': datetime.utcnow().isoformat(),
-            'severity': 'high' if opportunity['spread_percentage'] > 1.0 else 'medium'
+            'severity': severity
         }
         
         signal_id_counter += 1
@@ -203,8 +245,8 @@ def create_arbitrage_signal(opportunity):
         # Store in memory
         arbitrage_signals.append(signal)
         
-        # Keep only last 100 signals
-        if len(arbitrage_signals) > 100:
+        # Keep only last N signals
+        if len(arbitrage_signals) > ARBITRAGE_CONFIG['signal_memory_limit']:
             arbitrage_signals.pop(0)
         
         # Store in Redis
@@ -220,20 +262,21 @@ def create_arbitrage_signal(opportunity):
             # Publish to Redis channel
             redis_client.publish('arbitrage_signals', json.dumps(signal))
         
-        logger.info(f"🚨 Arbitrage signal created: {signal['type']} - {signal['spread_percentage']:.2f}% spread")
+        logger.info(f"🚨 Arbitrage signal created: {signal['type']} - {signal['spread_percentage']:.2f}% spread ({severity})")
         
     except Exception as e:
         logger.error(f"Error creating arbitrage signal: {e}")
 
-def arbitrage_detection_thread():
-    """Background thread for continuous arbitrage detection"""
-    while True:
-        try:
-            detect_arbitrage_opportunities()
-            time.sleep(10)  # Check every 10 seconds
-        except Exception as e:
-            logger.error(f"Arbitrage detection thread error: {e}")
-            time.sleep(30)  # Wait longer on error
+# Remove the periodic detection thread since we detect on every price update
+# def arbitrage_detection_thread():
+#     """Background thread for continuous arbitrage detection"""
+#     while True:
+#         try:
+#             detect_arbitrage_opportunities()
+#             time.sleep(10)  # Check every 10 seconds
+#         except Exception as e:
+#             logger.error(f"Arbitrage detection thread error: {e}")
+#             time.sleep(30)  # Wait longer on error
 
 def redis_price_listener():
     """Listen for price updates from Redis"""
@@ -251,7 +294,7 @@ def redis_price_listener():
                 price_data = json.loads(message['data'])
                 logger.info(f"📊 Received price update: {price_data['symbol']}")
                 
-                # Trigger arbitrage detection
+                # Trigger arbitrage detection on each price update
                 detect_arbitrage_opportunities()
                 
             except Exception as e:
@@ -384,8 +427,8 @@ if __name__ == '__main__':
     logger.info("🚀 Starting ASCEP Arbitrage Service...")
     
     # Start background threads
-    detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
-    detection_thread.start()
+    # detection_thread = threading.Thread(target=arbitrage_detection_thread, daemon=True)
+    # detection_thread.start()
     
     redis_thread = threading.Thread(target=redis_price_listener, daemon=True)
     redis_thread.start()

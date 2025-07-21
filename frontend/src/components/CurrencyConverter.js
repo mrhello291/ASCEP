@@ -126,36 +126,68 @@ const CurrencyConverter = ({ priceData, isConnected }) => {
   const popularPairs = getPopularPairs();
 
   // Calculate arbitrage opportunities
-  const calculateArbitrage = () => {
+  /**
+ * Calculate top N triangular arbitrage opportunities, removing duplicates (rotations/reversals).
+ * @param {string[]} currencies - Array of currency codes, e.g. ['EUR', 'USD', 'JPY']
+ * @param {function(string,string): number} getRate - Function returning exchange rate from currency1 to currency2
+ * @param {object} options
+ * @param {number} options.threshold - Minimum profit percentage to consider (e.g. 0.1 for 0.1%)
+ * @param {number} options.topN - Number of top opportunities to return
+ * @returns {Array<{path: string, profit: number, rates: number[]}>}
+ */
+  function calculateArbitrage(currencies, getRate, options = {}) {
+    const { threshold = 0.1, topN = 5 } = options;
     const opportunities = [];
-    
-    // Check for triangular arbitrage opportunities
-    currencies.forEach(currency1 => {
-      currencies.forEach(currency2 => {
-        currencies.forEach(currency3 => {
-          if (currency1 !== currency2 && currency2 !== currency3 && currency1 !== currency3) {
-            // Calculate triangular arbitrage
-            const rate1 = getRate(currency1, currency2);
-            const rate2 = getRate(currency2, currency3);
-            const rate3 = getRate(currency3, currency1);
-            
-            if (rate1 > 0 && rate2 > 0 && rate3 > 0) {
-              const arbitrage = (rate1 * rate2 * rate3 - 1) * 100;
-              if (arbitrage > 0.1) { // 0.1% threshold
-                opportunities.push({
-                  path: `${currency1} → ${currency2} → ${currency3} → ${currency1}`,
-                  profit: arbitrage,
-                  rates: [rate1, rate2, rate3]
-                });
-              }
-            }
+    const seen = new Set();
+
+    // Helper to canonicalize a cycle (ignoring rotations and direction)
+    function canonicalCycle([a, b, c]) {
+      const variants = [
+        [a, b, c],
+        [b, c, a],
+        [c, a, b]
+      ].map(arr => arr.join('→'));
+      const rev = [c, b, a];
+      const revVariants = [
+        [c, b, a],
+        [b, a, c],
+        [a, c, b]
+      ].map(arr => arr.join('→'));
+      return Math.min(...variants.concat(revVariants));
+    }
+
+    currencies.forEach(c1 => {
+      currencies.forEach(c2 => {
+        currencies.forEach(c3 => {
+          if (c1 === c2 || c2 === c3 || c1 === c3) return;
+
+          // canonical key to avoid duplicates
+          const key = canonicalCycle([c1, c2, c3]);
+          if (seen.has(key)) return;
+          seen.add(key);
+
+          const rate1 = getRate(c1, c2);
+          const rate2 = getRate(c2, c3);
+          const rate3 = getRate(c3, c1);
+          if (rate1 <= 0 || rate2 <= 0 || rate3 <= 0) return;
+
+          const profit = (rate1 * rate2 * rate3 - 1) * 100;
+          if (profit > threshold) {
+            opportunities.push({
+              path: `${c1}→${c2}→${c3}→${c1}`,
+              profit,
+              rates: [rate1, rate2, rate3]
+            });
           }
         });
       });
     });
-    
-    return opportunities.slice(0, 5); // Top 5 opportunities
-  };
+
+    // Sort by descending profit and return top N
+    return opportunities
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, topN);
+  }
 
   const getRate = (from, to) => {
     if (from === to) return 1;

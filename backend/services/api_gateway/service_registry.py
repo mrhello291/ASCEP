@@ -32,7 +32,7 @@ class ServiceRegistry:
         self.register_service(
             name="arbitrage",
             port=5003,
-            endpoints=["/signals", "/stats", "/health"],
+            endpoints=["/signals", "/stats", "/health", "/config"],
             description="Arbitrage detection service"
         )
         

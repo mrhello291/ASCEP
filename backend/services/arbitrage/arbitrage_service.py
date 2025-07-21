@@ -256,7 +256,7 @@ def create_arbitrage_signal(opportunity):
             redis_signal = signal.copy()
             redis_signal['symbols'] = json.dumps(signal['symbols'])
             redis_signal['prices'] = json.dumps(signal['prices'])
-            redis_client.hmset(signal_key, redis_signal)
+            redis_client.hset(signal_key, mapping=redis_signal)
             redis_client.expire(signal_key, 86400)  # 24 hours
             
             # Publish to Redis channel
@@ -288,17 +288,20 @@ def redis_price_listener():
     
     logger.info("👂 Listening for price updates...")
     
+    last_detection_time = 0
+    DETECTION_DEBOUNCE_SECONDS = 0.5
+    
     for message in pubsub.listen():
         if message['type'] == 'message':
-            try:
-                price_data = json.loads(message['data'])
-                logger.info(f"📊 Received price update: {price_data['symbol']}")
-                
-                # Trigger arbitrage detection on each price update
-                detect_arbitrage_opportunities()
-                
-            except Exception as e:
-                logger.error(f"Error processing price update: {e}")
+            now = time.time()
+            if now - last_detection_time > DETECTION_DEBOUNCE_SECONDS:
+                try:
+                    price_data = json.loads(message['data'])
+                    logger.info(f"📊 Received price update: {price_data['symbol']}")
+                    detect_arbitrage_opportunities()
+                except Exception as e:
+                    logger.error(f"Error processing price update: {e}")
+                last_detection_time = now
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -406,6 +409,25 @@ def get_stats():
         'average_spread': average_spread,
         'last_signal': arbitrage_signals[-1]['timestamp'] if arbitrage_signals else None
     })
+
+@app.route('/config', methods=['GET', 'POST'])
+def arbitrage_config():
+    """Get or update arbitrage config at runtime"""
+    global ARBITRAGE_CONFIG
+    if request.method == 'GET':
+        return jsonify(ARBITRAGE_CONFIG)
+    elif request.method == 'POST':
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        # Only update known keys
+        for key in ARBITRAGE_CONFIG:
+            if key in data:
+                if isinstance(ARBITRAGE_CONFIG[key], dict) and isinstance(data[key], dict):
+                    ARBITRAGE_CONFIG[key].update(data[key])
+                else:
+                    ARBITRAGE_CONFIG[key] = data[key]
+        return jsonify({'message': 'Config updated', 'config': ARBITRAGE_CONFIG})
 
 @app.route('/')
 def service_info():

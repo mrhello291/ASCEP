@@ -6,6 +6,9 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
   const [chartData, setChartData] = useState([]);
   const [selectedSymbols, setSelectedSymbols] = useState(['BTCUSDT', 'ETHUSDT', 'EUR/USD']);
   const [selectedChartType, setSelectedChartType] = useState('line');
+  const [arbitrageConfig, setArbitrageConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [configError, setConfigError] = useState(null);
 
   // Update chart data when priceData changes
   useEffect(() => {
@@ -28,6 +31,51 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
       return updatedData.slice(-20);
     });
   }, [priceData, selectedSymbols]);
+
+  // Fetch current config on mount
+  useEffect(() => {
+    async function fetchConfig() {
+      setConfigLoading(true);
+      setConfigError(null);
+      try {
+        const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${backendUrl}/api/arbitrage/config`);
+        if (!res.ok) throw new Error('Failed to fetch config');
+        const data = await res.json();
+        setArbitrageConfig(data);
+      } catch (e) {
+        setConfigError(e.message);
+      } finally {
+        setConfigLoading(false);
+      }
+    }
+    fetchConfig();
+  }, []);
+
+  // Handler for slider change
+  const handleConfigChange = (key, value) => {
+    setArbitrageConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Handler to update config in backend
+  const updateConfig = async () => {
+    setConfigLoading(true);
+    setConfigError(null);
+    try {
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${backendUrl}/api/arbitrage/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(arbitrageConfig)
+      });
+      if (!res.ok) throw new Error('Failed to update config');
+      // Optionally show a toast or notification
+    } catch (e) {
+      setConfigError(e.message);
+    } finally {
+      setConfigLoading(false);
+    }
+  };
 
   // Get recent signals
   const recentSignals = signals.slice(0, 5);
@@ -82,6 +130,41 @@ const Dashboard = ({ priceData, signals, isConnected, systemStatus }) => {
 
   return (
     <div className="space-y-6">
+      {/* Arbitrage Config Sliders */}
+      <div className="bg-gray-800 rounded-lg p-6 mb-4">
+        <h2 className="text-xl font-semibold text-white mb-2">Arbitrage Config</h2>
+        {configLoading && <p className="text-gray-400">Loading config...</p>}
+        {configError && <p className="text-red-400">{configError}</p>}
+        {arbitrageConfig && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-400 text-sm mb-1">Cross-currency threshold (%)</label>
+              <input type="range" min="0" max="2" step="0.01" value={arbitrageConfig.cross_currency_threshold}
+                onChange={e => handleConfigChange('cross_currency_threshold', parseFloat(e.target.value))}
+                className="w-full" />
+              <span className="text-white">{arbitrageConfig.cross_currency_threshold}</span>
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm mb-1">Triangular threshold (%)</label>
+              <input type="range" min="0" max="2" step="0.01" value={arbitrageConfig.triangular_threshold}
+                onChange={e => handleConfigChange('triangular_threshold', parseFloat(e.target.value))}
+                className="w-full" />
+              <span className="text-white">{arbitrageConfig.triangular_threshold}</span>
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm mb-1">Max signals per cycle</label>
+              <input type="range" min="1" max="20" step="1" value={arbitrageConfig.max_signals_per_cycle}
+                onChange={e => handleConfigChange('max_signals_per_cycle', parseInt(e.target.value))}
+                className="w-full" />
+              <span className="text-white">{arbitrageConfig.max_signals_per_cycle}</span>
+            </div>
+            <button onClick={updateConfig} disabled={configLoading}
+              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              Update Config
+            </button>
+          </div>
+        )}
+      </div>
       {/* Header */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h1 className="text-3xl font-bold text-white mb-2">

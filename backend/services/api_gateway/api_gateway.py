@@ -293,6 +293,23 @@ def list_services():
         'timestamp': datetime.utcnow().isoformat()
     })
 
+@app.route('/api/arbitrage/config', methods=['GET', 'POST'])
+def proxy_arbitrage_config():
+    """Proxy arbitrage config get/set to arbitrage service"""
+    import requests
+    arbitrage_url = service_registry.get_service_url('arbitrage')
+    if not arbitrage_url:
+        return jsonify({'error': 'Arbitrage service unavailable'}), 503
+    try:
+        if request.method == 'GET':
+            resp = requests.get(f'{arbitrage_url}/config', timeout=5)
+            return (resp.content, resp.status_code, resp.headers.items())
+        elif request.method == 'POST':
+            resp = requests.post(f'{arbitrage_url}/config', json=request.get_json(), timeout=5)
+            return (resp.content, resp.status_code, resp.headers.items())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():

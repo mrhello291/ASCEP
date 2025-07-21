@@ -140,7 +140,17 @@ def redis_price_listener():
 def detect_arbitrage_opportunities():
     """Detect arbitrage opportunities from in-memory price cache (no Redis scan)"""
     try:
-        prices = {sym: p for sym, (p, _) in latest_prices.items()}
+        now = time.time()
+        # Only use prices updated within the last 1 second
+        fresh_prices = {}
+        for symbol, (price, ts) in latest_prices.items():
+            try:
+                age = now - datetime.fromisoformat(ts).timestamp()
+                if age <= 0.5:
+                    fresh_prices[symbol] = price
+            except Exception as e:
+                logger.warning(f"Could not parse timestamp for {symbol}: {ts} ({e})")
+        prices = fresh_prices
         
         # Simple arbitrage detection logic
         opportunities = []

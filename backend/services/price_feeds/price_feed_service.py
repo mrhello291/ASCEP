@@ -53,11 +53,11 @@ def send_price_to_backend(symbol, price, timestamp):
         # Store in Redis
         if redis_client:
             price_key = f"price:{symbol}"
-            redis_client.hmset(price_key, {
+            redis_client.hset(price_key, {
                 'price': price,
                 'timestamp': timestamp
             })
-            redis_client.expire(price_key, 3600)  # 1 hour expiry
+            redis_client.expire(price_key, 600)  # 10 minute expiry
             
             # Publish to Redis channel for real-time updates
             redis_client.publish('price_updates', json.dumps(data))
